@@ -12,9 +12,91 @@ from .classic_discovery import GET_IP_REPLY_SIZE
 from .def_ import DISCOVERY_UDP_PORT
 from .instance import GoInstance
 
-GOPXL_DISCOVERY_SIGNATURE = 0x4C58504F47494D4C
+GOPXL_DISCOVERY_SIGNATURE = 0x4C58504F47494D4C  # "LMIGOPXL"
 GOPXL_DISCOVERY_MESSAGE_DISCOVER = 0x0001
 GOPXL_DISCOVERY_MESSAGE_ANNOUNCE = 0x1001
+GOPXL_MAX_MESSAGE_SIZE = 1536
+
+
+def _ipv4_interface_addresses() -> list[str]:
+    """Local IPv4 addresses to bind discovery senders (mirrors C++ kNetworkInfo)."""
+    addresses: set[str] = set()
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET, socket.SOCK_DGRAM):
+            ip = info[4][0]
+            if ip and not ip.startswith("127."):
+                addresses.add(ip)
+    except OSError:
+        pass
+
+    # Default-route interface (works even when hostname resolution is incomplete).
+    for probe_target in (("192.168.1.1", 1), ("8.8.8.8", 80)):
+        try:
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                probe.connect(probe_target)
+                ip = probe.getsockname()[0]
+                if ip and not ip.startswith("127."):
+                    addresses.add(ip)
+            finally:
+                probe.close()
+        except OSError:
+            continue
+
+    return sorted(addresses)
+
+
+def _make_udp_socket() -> socket.socket:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    if hasattr(socket, "SO_REUSEPORT"):
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        except OSError:
+            pass
+    return sock
+
+
+def _directed_broadcasts(iface_ip: str) -> list[str]:
+    """Best-effort /24 directed broadcasts for an interface address."""
+    parts = iface_ip.split(".")
+    if len(parts) != 4 or iface_ip.startswith("127."):
+        return []
+    try:
+        if not all(0 <= int(p) <= 255 for p in parts):
+            return []
+    except ValueError:
+        return []
+    return [f"{parts[0]}.{parts[1]}.{parts[2]}.255"]
+
+
+def _broadcast_discover(header: bytes, port: int) -> None:
+    """Send discovery broadcast from each local interface, then from INADDR_ANY.
+
+    Mirrors C++ GoPxLDiscoveryProto::Broadcast: bind a sender to each interface
+    and send to 255.255.255.255. Also sends /24 directed broadcasts, which are
+    more reliable on some Windows multi-homed setups.
+    """
+    targets = _ipv4_interface_addresses() + ["0.0.0.0"]
+    seen: set[str] = set()
+    for iface_ip in targets:
+        if iface_ip in seen:
+            continue
+        seen.add(iface_ip)
+        destinations = ["255.255.255.255"] + _directed_broadcasts(iface_ip)
+        sender = _make_udp_socket()
+        try:
+            sender.bind((iface_ip, 0))
+            for dest in destinations:
+                try:
+                    sender.sendto(header, (dest, port))
+                except OSError:
+                    continue
+        except OSError:
+            continue
+        finally:
+            sender.close()
 
 
 class GoDiscoveryClient:
@@ -35,18 +117,33 @@ class GoDiscoveryClient:
         self._instances = list(self._gopxl_instances) + list(self._classic_instances)
 
     def _discover_gopxl(self, timeout_ms: int) -> None:
+        # Matches DiscoveryBroadcastHeader: length, messageId, signature.
         header = struct.pack("<QQQ", 24, GOPXL_DISCOVERY_MESSAGE_DISCOVER, GOPXL_DISCOVERY_SIGNATURE)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(0.25)
         found: dict[tuple[str, int], GoInstance] = {}
+
+        # C++ binds the receiver to UDP 3320 — sensors reply to that port, not the
+        # ephemeral source port of the broadcast sender.
+        receiver = _make_udp_socket()
+        receiver.settimeout(0.25)
         try:
-            sock.bind(("", 0))
-            sock.sendto(header, ("<broadcast>", DISCOVERY_UDP_PORT))
+            try:
+                receiver.bind(("", DISCOVERY_UDP_PORT))
+            except OSError:
+                # Port busy (another discovery client). Fall back to ephemeral and
+                # also send from this socket so replies can return to it.
+                receiver.bind(("", 0))
+
+            _broadcast_discover(header, DISCOVERY_UDP_PORT)
+            # Extra send from the receiver socket (covers single-interface cases).
+            try:
+                receiver.sendto(header, ("255.255.255.255", DISCOVERY_UDP_PORT))
+            except OSError:
+                pass
+
             end = time.monotonic() + timeout_ms / 1000.0
             while time.monotonic() < end:
                 try:
-                    data, _ = sock.recvfrom(4096)
+                    data, _ = receiver.recvfrom(GOPXL_MAX_MESSAGE_SIZE)
                 except socket.timeout:
                     continue
                 except OSError:
@@ -55,7 +152,8 @@ class GoDiscoveryClient:
                 if inst:
                     found[(inst.ip_address, inst.web_port)] = inst
         finally:
-            sock.close()
+            receiver.close()
+
         self._gopxl_instances = sorted(found.values(), key=lambda i: i.ip_address)
 
     def _discover_classic(self, timeout_ms: int) -> None:
@@ -98,8 +196,7 @@ class GoDiscoveryClient:
                 return
             self._classic_instances.append(inst)
             self._instances.append(inst)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock = _make_udp_socket()
             try:
                 send_get_info(sock, serial)
             finally:
@@ -125,14 +222,19 @@ class GoDiscoveryClient:
 
     @staticmethod
     def _parse_announce(data: bytes) -> GoInstance | None:
+        # DiscoveryServerHeader is 32 bytes: length, messageId, signature, messageStatus.
         if len(data) < 32:
             return None
         _length, message_id, signature = struct.unpack_from("<QQQ", data, 0)
+        if message_id == GOPXL_DISCOVERY_MESSAGE_DISCOVER:
+            return None
         if message_id != GOPXL_DISCOVERY_MESSAGE_ANNOUNCE or signature != GOPXL_DISCOVERY_SIGNATURE:
             return None
         try:
-            text = data[32:].decode("utf-8", errors="replace").rstrip("\x00")
+            text = data[32:].decode("utf-8", errors="replace").split("\x00", 1)[0].strip()
+            if not text:
+                return None
             payload = json.loads(text)
-        except (UnicodeDecodeError, json.JSONDecodeError):
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
             return None
         return GoInstance.from_announce(payload)

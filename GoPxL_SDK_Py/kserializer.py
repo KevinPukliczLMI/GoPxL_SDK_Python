@@ -105,6 +105,18 @@ def image_row_size(width: int, pixel_size: int, color_filter: int, pixel_format:
     return width * pixel_size
 
 
+def is_native_pixel_format(pixel_format: int) -> bool:
+    """True for legacy kPixelFormat values 0-6."""
+    return pixel_format in _LEGACY_PIXEL_BITS
+
+
+def intensity_row_size(width: int, pixel_format: int) -> int:
+    """Row stride for surface/profile intensity — mirrors IntensityRowSize()."""
+    if is_native_pixel_format(pixel_format):
+        return width
+    return int(math.ceil(width * pixel_bytes(pixel_format)))
+
+
 def read_gdp_packet(sock: socket.socket) -> tuple[int, bytes]:
     header = _recv_exact(sock, 4)
     total = struct.unpack("<I", header)[0]

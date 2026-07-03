@@ -29,7 +29,7 @@ def _work(system) -> None:
     source = client.read(image_output).get_response().payload.get("dataSourceId")
     gh.enable_gocator_protocol(system)
     if source:
-        gh.add_gdp_output(system, f'"{source}"')
+        gh.add_gdp_output(system, source)
     system.start()
     client.call(TRIGGER_ACTION).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
     gdp = gh.connect_gdp(system)

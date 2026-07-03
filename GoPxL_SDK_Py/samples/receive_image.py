@@ -18,7 +18,7 @@ from common import sample_utils as su
 def _image_source() -> tuple[str, str]:
     key = "Image"
     source = f"scan:{su.ENGINE_ID}:{su.SCANNER_ID}:{su.SENSOR_ID}{key}0"
-    return f'"{source}"', key
+    return source, key
 
 
 def _work(system) -> None:

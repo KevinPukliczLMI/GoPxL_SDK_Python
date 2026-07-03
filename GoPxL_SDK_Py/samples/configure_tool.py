@@ -62,7 +62,7 @@ def _main(args):
             su.REST_COMMAND_TIMEOUT_MSEC
         )
         gh.enable_gocator_protocol(system)
-        gh.add_gdp_output(system, f'"{su.TOOL_OUTPUT_DATA_PATH}"', output_id=1)
+        gh.add_gdp_output(system, su.TOOL_OUTPUT_DATA_PATH, output_id=1)
     finally:
         system.disconnect()
     return su.OK_STATUS

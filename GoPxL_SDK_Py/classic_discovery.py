@@ -28,15 +28,27 @@ def _ipv4_from_bytes(raw: bytes) -> str:
     return socket.inet_ntoa(struct.pack(">I", host))
 
 
-def broadcast_get_ip(sock: socket.socket) -> None:
-    packet = struct.pack(
+def _get_ip_packet() -> bytes:
+    return struct.pack(
         "<QQQQ",
         24,
         CLASSIC_DISCOVERY_COMMAND_GET_IP,
         CLASSIC_BROADCAST_SIGNATURE,
         0,
     )
-    sock.sendto(packet, ("<broadcast>", CLASSIC_DISCOVERY_UDP_PORT))
+
+
+def broadcast_get_ip(sock: socket.socket | None = None) -> None:
+    """Broadcast GetIP from each local interface (and optionally an existing socket)."""
+    from .discovery import _broadcast_discover, _make_udp_socket
+
+    packet = _get_ip_packet()
+    _broadcast_discover(packet, CLASSIC_DISCOVERY_UDP_PORT)
+    if sock is not None:
+        try:
+            sock.sendto(packet, ("255.255.255.255", CLASSIC_DISCOVERY_UDP_PORT))
+        except OSError:
+            pass
 
 
 def send_get_info(sock: socket.socket, serial: int) -> None:
@@ -47,7 +59,14 @@ def send_get_info(sock: socket.socket, serial: int) -> None:
         CLASSIC_BROADCAST_SIGNATURE,
         serial,
     )
-    sock.sendto(packet, ("<broadcast>", CLASSIC_DISCOVERY_UDP_PORT))
+    try:
+        sock.sendto(packet, ("255.255.255.255", CLASSIC_DISCOVERY_UDP_PORT))
+    except OSError:
+        pass
+    # Also send from each interface so multi-homed hosts reach the sensor.
+    from .discovery import _broadcast_discover
+
+    _broadcast_discover(packet, CLASSIC_DISCOVERY_UDP_PORT)
 
 
 def parse_get_ip_reply(data: bytes) -> GoInstance | None:
@@ -129,16 +148,18 @@ def _format_version(version: int) -> str:
 
 
 def discover_classic(timeout_ms: int = 3000) -> list[GoInstance]:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    from .discovery import _make_udp_socket
+
+    sock = _make_udp_socket()
     sock.settimeout(0.25)
     pending: dict[int, GoInstance] = {}
     complete: dict[int, GoInstance] = {}
     try:
-        sock.bind(("", CLASSIC_DISCOVERY_UDP_PORT))
-    except OSError:
-        sock.bind(("", 0))
-    try:
+        # Classic sensors reply to UDP 3220 (same pattern as GoPxL on 3320).
+        try:
+            sock.bind(("", CLASSIC_DISCOVERY_UDP_PORT))
+        except OSError:
+            sock.bind(("", 0))
         broadcast_get_ip(sock)
         end = time.monotonic() + timeout_ms / 1000.0
         while time.monotonic() < end:

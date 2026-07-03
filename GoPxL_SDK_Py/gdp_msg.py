@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from typing import Any
 
 from .enums import MessageType
-from .kserializer import KSerializerReader, image_row_size, pixel_bytes
+from .kserializer import KSerializerReader, image_row_size, intensity_row_size
 
 _COMMON_ATTRS = (
     "data_source_id_",
@@ -52,21 +51,27 @@ class GoGdpMsg:
     @staticmethod
     def parse_common(reader: KSerializerReader, msg_type: MessageType) -> GoGdpMsg:
         msg = GoGdpMsg(msg_type=msg_type)
-        section = reader.section_u32()
-        msg.space_type = section.read_u8()
-        if section.read_u8() > 0:
-            _skip_transform(section)
-        if section.read_u8() > 0:
-            _skip_bbox(section)
-        msg.arrayed_count = section.read_u32()
-        msg.arrayed_index = section.read_u32()
-        ds_len = section.read_u16()
-        msg.data_source_id_ = section.read_text(ds_len)
-        st_len = section.read_u16()
-        msg.stamp_source_id_ = section.read_text(st_len)
-        msg.data_set_id_ = section.read_u64()
-        msg.is_last_msg_ = section.read_u8() > 0
-        msg.gdp_id = section.read_u16()
+        try:
+            section = reader.section_u32()
+            msg.space_type = section.read_u8()
+            if section.read_u8() > 0:
+                _skip_transform(section)
+            if section.read_u8() > 0:
+                _skip_bbox(section)
+            msg.arrayed_count = section.read_u32()
+            msg.arrayed_index = section.read_u32()
+            ds_len = section.read_u16()
+            msg.data_source_id_ = section.read_text(ds_len)
+            st_len = section.read_u16()
+            msg.stamp_source_id_ = section.read_text(st_len)
+            msg.data_set_id_ = section.read_u64()
+            msg.is_last_msg_ = section.read_u8() > 0
+            msg.gdp_id = section.read_u16()
+        except EOFError as exc:
+            raise EOFError(
+                f"Unexpected end of GDP data reading common header "
+                f"(type={int(msg_type)}, remaining={reader.remaining()})"
+            ) from exc
         return msg
 
 
@@ -121,18 +126,23 @@ class GoGdpProfileUniform(GoGdpMsg):
 @dataclass(slots=True)
 class GoGdpProfilePointCloud(GoGdpMsg):
     width_: int = 0
+    intensity_width_: int = 0
     resolution_x: float = 0.0
     resolution_z: float = 0.0
     offset_x: float = 0.0
     offset_z: float = 0.0
     exposure: float = 0.0
     points_: list[tuple[int, int]] = field(default_factory=list)
+    intensities_: bytes = b""
 
     def width(self) -> int:
         return self.width_
 
     def points(self) -> list[tuple[int, int]]:
         return self.points_
+
+    def intensities(self) -> bytes:
+        return self.intensities_
 
 
 @dataclass(slots=True)
@@ -425,9 +435,11 @@ def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
         return msg
 
     if mtype == MessageType.UNIFORM_PROFILE:
+        # u16 attribute section then ranges/intensities (may be in-section or parent).
         msg = GoGdpProfileUniform(msg_type=mtype)
         _apply_common(msg, common)
-        section = reader.section_u16()
+        section, parent = _split_u16_section(reader, "uniform profile")
+        _require_bytes(section, 44, "uniform profile attributes")
         msg.width_ = section.read_u32()
         msg.intensity_width_ = section.read_u32()
         msg.resolution_x = section.read_f64()
@@ -435,52 +447,71 @@ def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
         msg.offset_x = section.read_f64()
         msg.offset_z = section.read_f64()
         msg.exposure = section.read_f32()
-        msg.ranges_ = section.read_i16_array(msg.width_)
-        if msg.intensity_width_ > 0:
-            msg.intensities_ = section.read_u8_array(msg.intensity_width_)
+        payload = _join_readers(section, parent)
+        msg.ranges_ = _read_i16_payload(
+            payload, msg.width_, "uniform profile ranges", width=msg.width_
+        )
+        msg.intensities_ = _read_optional_u8_payload(payload, msg.intensity_width_)
         msg.raw = packet
         return msg
 
     if mtype == MessageType.PROFILE_POINT_CLOUD:
         msg = GoGdpProfilePointCloud(msg_type=mtype)
         _apply_common(msg, common)
-        section = reader.section_u16()
+        section, parent = _split_u16_section(reader, "profile point-cloud")
+        _require_bytes(section, 44, "profile point-cloud attributes")
         msg.width_ = section.read_u32()
+        msg.intensity_width_ = section.read_u32()
         msg.resolution_x = section.read_f64()
         msg.resolution_z = section.read_f64()
         msg.offset_x = section.read_f64()
         msg.offset_z = section.read_f64()
         msg.exposure = section.read_f32()
-        raw = section.read_i16_array(msg.width_ * 2)
+        payload = _join_readers(section, parent)
+        raw = _read_i16_payload(
+            payload, msg.width_ * 2, "profile point-cloud ranges", width=msg.width_
+        )
         msg.points_ = [(raw[i], raw[i + 1]) for i in range(0, len(raw), 2)]
+        msg.intensities_ = _read_optional_u8_payload(payload, msg.intensity_width_)
         msg.raw = packet
         return msg
 
     if mtype == MessageType.UNIFORM_SURFACE:
+        # Attribute section holds base attrs + optional intensity format; payload follows.
         msg = GoGdpSurfaceUniform(msg_type=mtype)
         _apply_common(msg, common)
-        section = reader.section_u16()
+        section, parent = _split_u16_section(reader, "uniform surface")
         _read_surface_base(section, msg)
-        msg.intensity_pixel_format = _read_intensity_pixel_format(section, msg.intensity_length_, msg.intensity_width_)
-        msg.ranges_ = section.read_i16_array(msg.length_ * msg.width_)
-        if msg.intensity_length_ > 0 and msg.intensity_width_ > 0:
-            row = int(math.ceil(msg.intensity_width_ * pixel_bytes(msg.intensity_pixel_format)))
-            msg.intensities_ = section.read_u8_array(msg.intensity_length_ * row)
+        msg.intensity_pixel_format = _read_intensity_pixel_format(
+            section, msg.intensity_length_, msg.intensity_width_
+        )
+        payload = _join_readers(section, parent)
+        count = msg.length_ * msg.width_
+        msg.ranges_ = _read_i16_payload(
+            payload, count, "surface uniform ranges",
+            length=msg.length_, width=msg.width_,
+        )
+        _read_intensity_payload(payload, msg, "surface uniform intensity")
         msg.raw = packet
         return msg
 
     if mtype == MessageType.SURFACE_POINT_CLOUD:
         msg = GoGdpSurfacePointCloud(msg_type=mtype)
         _apply_common(msg, common)
-        section = reader.section_u16()
+        section, parent = _split_u16_section(reader, "surface point-cloud")
         _read_surface_base(section, msg)
         msg.is_adjacent = section.read_u8() > 0
-        msg.intensity_pixel_format = _read_intensity_pixel_format(section, msg.intensity_length_, msg.intensity_width_)
-        raw = section.read_i16_array(msg.length_ * msg.width_ * 3)
+        msg.intensity_pixel_format = _read_intensity_pixel_format(
+            section, msg.intensity_length_, msg.intensity_width_
+        )
+        payload = _join_readers(section, parent)
+        count = msg.length_ * msg.width_ * 3
+        raw = _read_i16_payload(
+            payload, count, "surface point-cloud ranges",
+            length=msg.length_, width=msg.width_,
+        )
         msg.ranges_ = [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, len(raw), 3)]
-        if msg.intensity_length_ > 0 and msg.intensity_width_ > 0:
-            row = int(math.ceil(msg.intensity_width_ * pixel_bytes(msg.intensity_pixel_format)))
-            msg.intensities_ = section.read_u8_array(msg.intensity_length_ * row)
+        _read_intensity_payload(payload, msg, "surface point-cloud intensity")
         msg.raw = packet
         return msg
 
@@ -643,6 +674,7 @@ def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
 
 
 def _read_surface_base(section: KSerializerReader, msg: GoGdpSurfaceUniform | GoGdpSurfacePointCloud) -> None:
+    _require_bytes(section, 72, "surface attributes")
     msg.length_ = section.read_u32()
     msg.width_ = section.read_u32()
     msg.intensity_length_ = section.read_u32()
@@ -658,7 +690,110 @@ def _read_intensity_pixel_format(section: KSerializerReader, intensity_length: i
         return 0
     if section.remaining() >= 4:
         return section.read_i32()
-    return 1
+    return 1  # Greyscale_8BPP legacy fallback
+
+
+def _require_bytes(reader: KSerializerReader, count: int, label: str) -> None:
+    if reader.remaining() < count:
+        raise EOFError(
+            f"Unexpected end of GDP data reading {label}: "
+            f"need {count} bytes, have {reader.remaining()}"
+        )
+
+
+def _split_u16_section(
+    reader: KSerializerReader, label: str
+) -> tuple[KSerializerReader, KSerializerReader]:
+    """Split a u16-sized attribute section from the remainder of the frame.
+
+    If the section size claims more bytes than remain, consume all remaining
+    bytes as the section (some firmware packs payload into the section size).
+    """
+    if reader.remaining() < 2:
+        raise EOFError(
+            f"Unexpected end of GDP data reading {label} section size "
+            f"(have {reader.remaining()} bytes)"
+        )
+    size = reader.read_u16()
+    content_len = max(size - 2, 0)
+    avail = reader.remaining()
+    take = min(content_len, avail)
+    section_bytes = reader.read_bytes(take)
+    parent_bytes = reader.read_bytes(reader.remaining())
+    return KSerializerReader(section_bytes), KSerializerReader(parent_bytes)
+
+
+def _join_readers(
+    section: KSerializerReader, parent: KSerializerReader
+) -> KSerializerReader:
+    """Concatenate unread section bytes with parent-frame bytes as payload."""
+    chunks = b""
+    if section.remaining() > 0:
+        chunks += section.read_bytes(section.remaining())
+    if parent.remaining() > 0:
+        chunks += parent.read_bytes(parent.remaining())
+    return KSerializerReader(chunks)
+
+
+def _read_i16_payload(
+    reader: KSerializerReader,
+    count: int,
+    label: str,
+    **dims: int,
+) -> list[int]:
+    if count <= 0:
+        return []
+    needed = count * 2
+    avail = reader.remaining()
+    if avail < needed:
+        # Accept partial payloads (seen on profile outputs while in surface mode).
+        if avail >= 2 and avail % 2 == 0:
+            return reader.read_i16_array(avail // 2)
+        detail = ", ".join(f"{k}={v}" for k, v in dims.items())
+        raise EOFError(
+            f"Unexpected end of GDP data reading {label}: "
+            f"need {needed} bytes, have {avail}"
+            + (f" ({detail})" if detail else "")
+        )
+    return reader.read_i16_array(count)
+
+
+def _read_optional_u8_payload(reader: KSerializerReader, count: int) -> bytes:
+    """Read up to *count* bytes; trailing intensity is omitted if the packet is short."""
+    if count <= 0:
+        return b""
+    avail = reader.remaining()
+    if avail <= 0:
+        return b""
+    return reader.read_u8_array(min(count, avail))
+
+
+def _read_intensity_payload(
+    reader: KSerializerReader,
+    msg: GoGdpSurfaceUniform | GoGdpSurfacePointCloud,
+    label: str,
+) -> None:
+    if msg.intensity_length_ <= 0 or msg.intensity_width_ <= 0:
+        return
+    row = intensity_row_size(msg.intensity_width_, msg.intensity_pixel_format)
+    needed = msg.intensity_length_ * row
+    avail = reader.remaining()
+    if avail < needed:
+        # Fall back to 1 byte/pixel (legacy native intensity) if format was misread.
+        native = msg.intensity_length_ * msg.intensity_width_
+        if avail >= native:
+            needed = native
+            msg.intensity_pixel_format = 1
+        elif avail > 0:
+            needed = avail
+        else:
+            raise EOFError(
+                f"Unexpected end of GDP data reading {label}: "
+                f"need {needed} bytes (length={msg.intensity_length_}, "
+                f"width={msg.intensity_width_}, format={msg.intensity_pixel_format}), "
+                f"have {avail}"
+            )
+    msg.intensities_ = reader.read_u8_array(needed)
 
 
 def _read_mesh_channel(reader: KSerializerReader, channel_id: int, count: int) -> list[Any]:
@@ -794,10 +929,12 @@ def _parse_graphics(reader: KSerializerReader) -> GoGraphics:
 
 
 def _skip_transform(section: KSerializerReader) -> None:
-    for _ in range(16):
+    # GoGdpTransform: 3x4 matrix of f32 (xx..zt), implicit last row [0,0,0,1].
+    for _ in range(12):
         section.read_f32()
 
 
 def _skip_bbox(section: KSerializerReader) -> None:
+    # GoGdpBoundingBox: x,y,z,width,length,height as f32 (not f64).
     for _ in range(6):
-        section.read_f64()
+        section.read_f32()

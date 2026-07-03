@@ -198,18 +198,18 @@ def connect_system(system, ip: str, port: int) -> int:
 def profile_source_id(engine_id: str = ENGINE_ID) -> str:
     layer = "Layer0" if engine_id == "LMIConfocalLineProfiler" else ""
     key = "topUniformProfile" + layer
-    return f'"scan:{engine_id}:scanner-0:{key}"'
+    return f"scan:{engine_id}:scanner-0:{key}"
 
 
 def surface_source_id(engine_id: str = ENGINE_ID, scanner_id: str = SCANNER_ID) -> str:
     component = SENSOR_ID if engine_id == "LMIFringeSnapshot" else "top"
     layer = "Layer0" if engine_id == "LMIConfocalLineProfiler" else ""
     key = f"{component}UniformSurface{layer}"
-    return f'"scan:{engine_id}:{scanner_id}:{key}"'
+    return f"scan:{engine_id}:{scanner_id}:{key}"
 
 
 def stamp_source_id(engine_id: str = ENGINE_ID) -> str:
-    return f'"scan:{engine_id}:scanner-0:stamp"'
+    return f"scan:{engine_id}:scanner-0:stamp"
 
 
 def run_main(description: str, runner) -> int:

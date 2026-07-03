@@ -102,6 +102,8 @@ def print_dataset_messages(dataset) -> None:
         GoGdpProfileUniform,
         GoGdpStamp,
         GoGdpString,
+        GoGdpSurfacePointCloud,
+        GoGdpSurfaceUniform,
     )
 
     print(f"\nTotal number of messages: {dataset.count()}")
@@ -131,6 +133,20 @@ def print_dataset_messages(dataset) -> None:
             print(f"Row size: {msg.row_size()}, Pixel bytes: {len(msg.pixels())}")
             print(f"Pixel format: {msg.pixel_format}, Color filter: {msg.color_filter}")
             print(f"Flipped X/Y: {msg.flipped_x}/{msg.flipped_y}, Column based: {msg.column_based}")
+        elif isinstance(msg, GoGdpSurfaceUniform):
+            print("Message type: Uniform Surface")
+            print(f"GDP ID: {msg.gdp_id}")
+            print(f"Data Source ID: {msg.data_source_id()}")
+            print(f"Length: {msg.length()}, Width: {msg.width()}")
+            print(f"Range points: {len(msg.ranges())}")
+            print(f"Intensity bytes: {len(msg.intensities())}")
+        elif isinstance(msg, GoGdpSurfacePointCloud):
+            print("Message type: Point Cloud Surface")
+            print(f"GDP ID: {msg.gdp_id}")
+            print(f"Data Source ID: {msg.data_source_id()}")
+            print(f"Length: {msg.length()}, Width: {msg.width()}")
+            print(f"Range points: {len(msg.ranges())}")
+            print(f"Intensity bytes: {len(msg.intensities())}")
         elif isinstance(msg, GoGdpStamp):
             print("Message type: Stamp")
             print(f"Frame index: {msg.frame_index}")

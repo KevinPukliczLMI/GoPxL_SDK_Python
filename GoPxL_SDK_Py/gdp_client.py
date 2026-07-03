@@ -101,7 +101,12 @@ class GoGdpClient:
                 raise GoChannelError("GDP receive timed out")
             try:
                 msg_type, packet = read_gdp_packet(self._sock)
-                msg = parse_gdp_message(msg_type, packet)
+                try:
+                    msg = parse_gdp_message(msg_type, packet)
+                except EOFError as exc:
+                    raise EOFError(
+                        f"{exc} (message type={msg_type}, packet size={len(packet)})"
+                    ) from exc
                 self._dataset.add(msg)
                 if isinstance(msg, GoGdpMsg) and msg.is_last_msg():
                     return
@@ -109,7 +114,8 @@ class GoGdpClient:
                 remaining -= 1.0
                 continue
             except EOFError as exc:
-                self._connected = False
+                if "connection closed" in str(exc).lower():
+                    self._connected = False
                 raise GoChannelError(str(exc)) from exc
 
     def receive_data_async(self, callback: Callable[[GoDataSet], None]) -> None:

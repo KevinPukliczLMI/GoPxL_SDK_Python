@@ -17,6 +17,11 @@ from common import sample_utils as su
 
 def _work(system) -> None:
     gh.setup_live_or_replay(system, su.SURFACE_MODE)
+    print("\nEnabling intensity...")
+    system.client().update(
+        su.SCANNER_PATH,
+        {"parameters": {"scanModeSettings": {"intensityEnabled": True}}},
+    ).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
     gh.run_gdp_receive(system, su.surface_source_id(), "UniformSurface")
 
 
