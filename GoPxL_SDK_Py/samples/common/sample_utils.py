@@ -13,11 +13,20 @@ ENGINE_ID = "LMILaserLineProfiler"
 SCANNER_ID = "scanner-0"
 SENSOR_ID = "sensor-0"
 
+# 2D / SmartCam engine (Gocator 1120-M and similar machine-vision cameras).
+ENGINE_ID_2D = "2dscanner"
+ENGINE_PATH_2D = f"/scan/engines/{ENGINE_ID_2D}"
+SCANNER_PATH_2D = f"{ENGINE_PATH_2D}/scanners/{SCANNER_ID}"
+SENSOR_PATH_2D = f"{SCANNER_PATH_2D}/sensors/{SENSOR_ID}"
+OUTPUTS_PATH_2D = f"{SCANNER_PATH_2D}/outputs"
+IMAGE_SOURCE_2D = f"scan:{ENGINE_ID_2D}:{SCANNER_ID}:image"
+
 API_VERSION_PATH = "/version"
 ENVIRON_INFO_PATH = "/environ/info"
 REMOTE_CONTROLLER_PATH = "/environ/remoteController"
 VISIBLE_SENSORS_PATH = "/scan/visibleSensors/"
 IP_CONFIG_PATH = "/environ/ipConfig"
+ENGINES_PATH = "/scan/engines"
 
 ENGINE_PATH = f"/scan/engines/{ENGINE_ID}"
 SCANNER_PATH = f"{ENGINE_PATH}/scanners/{SCANNER_ID}"
@@ -193,6 +202,117 @@ def connect_system(system, ip: str, port: int) -> int:
         print("Connection failed. Check if sensor is powered on, connected, and using correct IP/port.")
         return ERROR_STATUS
     return OK_STATUS
+
+
+def _engine_ids_from_payload(payload: dict) -> list[str]:
+    """Extract engine ids from an engines collection payload."""
+    engine_ids: list[str] = []
+    embedded = payload.get("_embedded") or {}
+    for key in ("item", "go:engine", "engines"):
+        items = embedded.get(key)
+        if items is None:
+            continue
+        if isinstance(items, dict):
+            items = [items]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            href = ((item.get("_links") or {}).get("self") or {}).get("href", "")
+            engine_id = str(href).rstrip("/").split("/")[-1]
+            if not engine_id or engine_id in ("engines", "scan"):
+                engine_id = str(item.get("id") or item.get("engineId") or "")
+            if engine_id and engine_id not in engine_ids:
+                engine_ids.append(engine_id)
+    # Some responses list engines as a top-level map/list.
+    for key in ("engines", "items"):
+        items = payload.get(key)
+        if isinstance(items, dict):
+            for engine_id in items:
+                if engine_id and engine_id not in engine_ids:
+                    engine_ids.append(str(engine_id))
+        elif isinstance(items, list):
+            for item in items:
+                if isinstance(item, str) and item not in engine_ids:
+                    engine_ids.append(item)
+                elif isinstance(item, dict):
+                    engine_id = str(item.get("id") or item.get("engineId") or "")
+                    if engine_id and engine_id not in engine_ids:
+                        engine_ids.append(engine_id)
+    return engine_ids
+
+
+def _engine_is_live(system, engine_id: str) -> bool:
+    """True if the engine's default scanner path exists on the device."""
+    from gopxl_sdk.exceptions import GoRequestError
+
+    try:
+        system.client().read(scanner_path_for(engine_id)).get_response(REST_COMMAND_TIMEOUT_MSEC)
+        return True
+    except GoRequestError:
+        return False
+
+
+def resolve_engine_id(system, preferred: str | None = None) -> str:
+    """Return a live scan engine id (one whose scanner path exists)."""
+    candidates: list[str] = []
+    try:
+        payload = system.client().read(ENGINES_PATH, args={"expandLevel": 1}).get_response(
+            REST_COMMAND_TIMEOUT_MSEC
+        ).payload
+        candidates.extend(_engine_ids_from_payload(payload))
+    except Exception:
+        pass
+
+    # Visible sensors often report the active engine even when /engines is sparse.
+    try:
+        sensors = (
+            system.client()
+            .read(VISIBLE_SENSORS_PATH, args={"expandLevel": 1})
+            .get_response(REST_COMMAND_TIMEOUT_MSEC)
+            .payload.get("sensors")
+            or []
+        )
+        for sensor in sensors:
+            if not isinstance(sensor, dict):
+                continue
+            engine_id = str(sensor.get("engineId") or "")
+            if engine_id and engine_id not in candidates:
+                candidates.append(engine_id)
+            path = str(sensor.get("path") or "")
+            # path like /scan/engines/2dscanner/scanners/scanner-0/sensors/sensor-0
+            parts = path.strip("/").split("/")
+            if len(parts) >= 3 and parts[0] == "scan" and parts[1] == "engines":
+                engine_id = parts[2]
+                if engine_id and engine_id not in candidates:
+                    candidates.append(engine_id)
+    except Exception:
+        pass
+
+    for engine_id in (preferred, ENGINE_ID_2D, ENGINE_ID, "LMIConfocalLineProfiler", "LMIFringeSnapshot"):
+        if engine_id and engine_id not in candidates:
+            candidates.append(engine_id)
+
+    live = [engine_id for engine_id in candidates if _engine_is_live(system, engine_id)]
+    if preferred and preferred in live:
+        return preferred
+    if live:
+        return live[0]
+    raise RuntimeError(
+        "No live scan engines found on device. "
+        f"Candidates checked: {', '.join(candidates) or '(none)'}"
+    )
+
+
+def scanner_path_for(engine_id: str) -> str:
+    return f"/scan/engines/{engine_id}/scanners/{SCANNER_ID}"
+
+
+def sensor_path_for(engine_id: str) -> str:
+    return f"{scanner_path_for(engine_id)}/sensors/{SENSOR_ID}"
+
+
+def outputs_path_for(engine_id: str) -> str:
+    return f"{scanner_path_for(engine_id)}/outputs"
 
 
 def profile_source_id(engine_id: str = ENGINE_ID) -> str:
