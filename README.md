@@ -159,13 +159,12 @@ GoPxL_SDK_Py/
 
 ## C++ SDK parity
 
-This SDK covers the main control-plane workflows: REST, discovery, GDP receive, and the GoResource API. A few C++ features are simplified or partial:
+This SDK covers the main control-plane workflows: REST, discovery, GDP receive (including images), async GDP with a receive/queue/callback thread model, and the GoResource API.
 
-- `GoJson` / `GoUri` utility wrappers (Python uses `dict` and `json_pointer` helpers)
-- GDP image parsing and PFNC pixel-format utilities (profiles/surfaces/measurements are solid)
-- C++ async GDP uses a receive thread plus queue; Python uses a single background thread with callbacks
+A few C++ utility types are simplified in Python:
 
-For production image pipelines or maximum GDP throughput, compare behavior with the C++ SDK on your hardware.
+- `GoJson` / `GoUri` wrappers (Python uses `dict` and `json_pointer` helpers)
+- Common-header transform / bounding-box fields are skipped during GDP parse
 
 ## License
 

@@ -94,8 +94,8 @@ def run_gdp_receive(system, source_id: str, source_key: str, timeout_ms: int | N
 
 
 def print_dataset_messages(dataset) -> None:
-    from gopxl_sdk.enums import MessageType
     from gopxl_sdk.gdp_msg import (
+        GoGdpImage,
         GoGdpMeasurement,
         GoGdpNull,
         GoGdpProfilePointCloud,
@@ -123,6 +123,14 @@ def print_dataset_messages(dataset) -> None:
             valid = sum(1 for x, z in msg.points() if x != su.INT16_NULL)
             print(f"Profile points count: {msg.width()}")
             print(f"Valid points count: {valid}")
+        elif isinstance(msg, GoGdpImage):
+            print("Message type: Image")
+            print(f"GDP ID: {msg.gdp_id}")
+            print(f"Data Source ID: {msg.data_source_id()}")
+            print(f"Width: {msg.width()}, Height: {msg.height()}")
+            print(f"Row size: {msg.row_size()}, Pixel bytes: {len(msg.pixels())}")
+            print(f"Pixel format: {msg.pixel_format}, Color filter: {msg.color_filter}")
+            print(f"Flipped X/Y: {msg.flipped_x}/{msg.flipped_y}, Column based: {msg.column_based}")
         elif isinstance(msg, GoGdpStamp):
             print("Message type: Stamp")
             print(f"Frame index: {msg.frame_index}")

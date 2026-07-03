@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -194,11 +195,16 @@ class GoGdpImage(GoGdpMsg):
     height_: int = 0
     width_: int = 0
     pixel_size: int = 0
-    color_filter: int = 0
     pixel_format: int = 0
+    color_filter: int = 0
     exposure: float = 0.0
-    resolution: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    offset: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    flipped_x: bool = False
+    flipped_y: bool = False
+    column_based: bool = False
+    # 2D resolution/offset (x, y) — present from GoPxL 1.3+
+    resolution: tuple[float, float] = (0.0, 0.0)
+    offset: tuple[float, float] = (0.0, 0.0)
+    row_size_: int = 0
     pixels_: bytes = b""
 
     def height(self) -> int:
@@ -206,6 +212,9 @@ class GoGdpImage(GoGdpMsg):
 
     def width(self) -> int:
         return self.width_
+
+    def row_size(self) -> int:
+        return self.row_size_
 
     def pixels(self) -> bytes:
         return self.pixels_
@@ -379,9 +388,10 @@ _MESH_ID_FACET_NORMAL = 4
 _MESH_ID_VERTEX_NORMAL = 5
 _MESH_ID_VERTEX_CURVATURE = 6
 
-_REGION_PROFILE_2D = 1
+# Mirrors GoGdpRendering::RegionType
+_REGION_PROFILE_2D = 0
+_REGION_3D = 1
 _REGION_SURFACE_2D = 2
-_REGION_3D = 3
 
 
 def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
@@ -454,7 +464,7 @@ def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
         msg.intensity_pixel_format = _read_intensity_pixel_format(section, msg.intensity_length_, msg.intensity_width_)
         msg.ranges_ = section.read_i16_array(msg.length_ * msg.width_)
         if msg.intensity_length_ > 0 and msg.intensity_width_ > 0:
-            row = msg.intensity_width_ * pixel_bytes(msg.intensity_pixel_format)
+            row = int(math.ceil(msg.intensity_width_ * pixel_bytes(msg.intensity_pixel_format)))
             msg.intensities_ = section.read_u8_array(msg.intensity_length_ * row)
         msg.raw = packet
         return msg
@@ -469,25 +479,43 @@ def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
         raw = section.read_i16_array(msg.length_ * msg.width_ * 3)
         msg.ranges_ = [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, len(raw), 3)]
         if msg.intensity_length_ > 0 and msg.intensity_width_ > 0:
-            row = msg.intensity_width_ * pixel_bytes(msg.intensity_pixel_format)
+            row = int(math.ceil(msg.intensity_width_ * pixel_bytes(msg.intensity_pixel_format)))
             msg.intensities_ = section.read_u8_array(msg.intensity_length_ * row)
         msg.raw = packet
         return msg
 
     if mtype == MessageType.IMAGE:
+        # Wire layout matches GoGdpImage::Deserialize:
+        # u16 section: height, width, pixelSize, pixelFormat, colorFilter,
+        # reserved16, exposure, flippedX/Y, columnBased, optional res/offset (x,y).
+        # Pixel bytes follow the section on the parent serializer.
         msg = GoGdpImage(msg_type=mtype)
         _apply_common(msg, common)
         section = reader.section_u16()
         msg.height_ = section.read_u32()
         msg.width_ = section.read_u32()
         msg.pixel_size = section.read_u32()
-        msg.color_filter = section.read_u32()
         msg.pixel_format = section.read_i32()
+        msg.color_filter = section.read_i32()
+        section.read_u16()  # reserved
         msg.exposure = section.read_f32()
-        msg.resolution = (section.read_f64(), section.read_f64(), section.read_f64())
-        msg.offset = (section.read_f64(), section.read_f64(), section.read_f64())
-        row = image_row_size(msg.width_, msg.pixel_size, msg.color_filter, msg.pixel_format)
-        msg.pixels_ = section.read_u8_array(msg.height_ * row)
+        msg.flipped_x = section.read_u8() > 0
+        msg.flipped_y = section.read_u8() > 0
+        msg.column_based = section.read_u8() > 0
+        # Optional fields added in GoPxL 1.3 (2D resolution/offset).
+        if section.remaining() >= 32:
+            msg.resolution = (section.read_f64(), section.read_f64())
+            msg.offset = (section.read_f64(), section.read_f64())
+        msg.row_size_ = image_row_size(
+            msg.width_, msg.pixel_size, msg.color_filter, msg.pixel_format
+        )
+        bytes_needed = msg.height_ * msg.row_size_
+        if reader.remaining() < bytes_needed:
+            raise EOFError(
+                f"Insufficient bytes for image pixels: need {bytes_needed}, "
+                f"have {reader.remaining()}"
+            )
+        msg.pixels_ = reader.read_u8_array(bytes_needed)
         msg.raw = packet
         return msg
 

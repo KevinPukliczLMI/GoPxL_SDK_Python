@@ -74,13 +74,32 @@ class KSerializerReader:
         return self.read_exact(n)
 
 
-def pixel_bytes(pixel_format: int) -> int:
-    # Minimal mapping; unknown formats default to 1 byte/pixel.
-    mapping = {0: 1, 1: 1, 2: 2, 3: 3, 4: 4}
-    return mapping.get(pixel_format, 1)
+# Legacy kPixelFormat values (bits per pixel). PFNC formats encode size in bits 16-23.
+_LEGACY_PIXEL_BITS = {
+    0: 0,   # Null_Format
+    1: 8,   # Greyscale_8BPP
+    2: 8,   # CFA_8BPP
+    3: 32,  # BGRX_8BPC
+    4: 1,   # Greyscale_1BPP
+    5: 16,  # Greyscale_16BPP
+    6: 24,  # BGR_8BPC
+}
+
+
+def pixel_bits(pixel_format: int) -> int:
+    """Bits per pixel — mirrors GoGdpPixelFormat::PixelBits."""
+    if pixel_format in _LEGACY_PIXEL_BITS:
+        return _LEGACY_PIXEL_BITS[pixel_format]
+    return (pixel_format >> 16) & 0xFF
+
+
+def pixel_bytes(pixel_format: int) -> float:
+    """Bytes per pixel (may be fractional for packed formats)."""
+    return pixel_bits(pixel_format) / 8.0
 
 
 def image_row_size(width: int, pixel_size: int, color_filter: int, pixel_format: int) -> int:
+    """Row stride in bytes — mirrors GoGdpImage::RowSize."""
     if pixel_size == 0 and color_filter == 0:
         return int(math.ceil(width * pixel_bytes(pixel_format)))
     return width * pixel_size
