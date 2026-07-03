@@ -70,15 +70,17 @@ if started:
 system.disconnect()
 ```
 
-Enable Gocator Protocol outputs before receiving GDP data (see `samples/receive_profile.py`).
+Enable Gocator Protocol and add GDP outputs before receiving data (see `samples/receive_profile.py` or `samples/receive_2d_image.py`).
 
 ## Discovery
+
+UDP discovery binds to port **3320** and broadcasts from each local interface (same model as the C++ SDK):
 
 ```python
 from gopxl_sdk import GoDiscoveryClient, GoSystem
 
 discovery = GoDiscoveryClient()
-discovery.blocking_discover(timeout_ms=3000)
+discovery.blocking_discover(timeout_ms=3000, classic_discover=True)
 for inst in discovery.instance_list():
     print(inst.ip_address, inst.app_name, inst.control_port)
 
@@ -87,6 +89,8 @@ for inst in discovery.instance_list():
     # ...
     system.disconnect()
 ```
+
+The PC and sensor must share a subnet (broadcast does not cross routers).
 
 ## GoResource API (v1.5)
 
@@ -111,20 +115,34 @@ print(sensor.get_string("displayName"))
 system.disconnect()
 ```
 
+On SmartCam / 1120-M devices use the `2dscanner` engine path instead, for example:
+
+`/scan/engines/2dscanner/scanners/scanner-0/sensors/sensor-0`
+
 See `samples/resource_api/` for subscriptions, schema, and commands.
 
 ## Samples
 
-24 sample applications under `samples/` — Python ports of the C++ SDK samples. Each accepts `--ip` and `--port`:
+Sample applications live under `samples/` — Python ports of the C++ SDK samples. Each accepts `--ip` and `--port`:
 
 ```bash
 cd samples
 python discover.py
-python receive_profile.py --ip 192.168.1.10 --port 3600
+python receive_profile.py --ip 192.168.1.30 --port 3600
+python receive_2d_image.py --ip 192.168.1.10
 python resource_api/resource_subscriptions.py
 ```
 
 Samples bootstrap the SDK from the parent folder via `samples/common/sample_utils.py`, so `pip install` is optional for local development.
+
+**Device types**
+
+| Device | Engine id | Typical samples |
+|--------|-----------|-----------------|
+| Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `receive_measurement` |
+| SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
+
+`receive_image.py` and `receive_metrics.py` auto-detect the live engine when possible.
 
 Full index: [samples/README.md](samples/README.md)
 
@@ -134,7 +152,7 @@ Full index: [samples/README.md](samples/README.md)
 |-----------|-------------|
 | `GoSystem` | Connect, start/stop, GDP port, sensor paths, resource manager |
 | `GoRestClient` | REST CRUD, commands, sub/unsub, streams, notification listeners |
-| `GoGdpClient` | GDP TCP streaming (sync and callback-based async receive) |
+| `GoGdpClient` | GDP TCP streaming (sync and async with receive queue + callback thread) |
 | `GoDataSet` / GDP messages | Profile, surface, image, stamp, measurement, mesh, spots, rendering, features, signal/null/health |
 | `GoDiscoveryClient` | GoPxL UDP discovery (port 3320) and classic Gocator discovery (port 3220) |
 | `GoResource` / `GoResourceManager` | Cached resources, schema validation, subscriptions, HAL children, deferred updates |
@@ -159,12 +177,9 @@ GoPxL_SDK_Py/
 
 ## C++ SDK parity
 
-This SDK covers the main control-plane workflows: REST, discovery, GDP receive (including images), async GDP with a receive/queue/callback thread model, and the GoResource API.
+This SDK covers the main control-plane workflows: REST, discovery, GDP receive (profiles, surfaces, images, measurements), async GDP with a receive/queue/callback thread model, and the GoResource API.
 
-A few C++ utility types are simplified in Python:
-
-- `GoJson` / `GoUri` wrappers (Python uses `dict` and `json_pointer` helpers)
-- Common-header transform / bounding-box fields are skipped during GDP parse
+GDP common-header transform (3×4 `f32`) and bounding box (6×`f32`) are parsed for wire alignment. Public `GoGdpTransform` / `GoGdpBoundingBox` types and `GoJson` / `GoUri` wrappers are not exposed; Python uses `dict` and `json_pointer` helpers instead.
 
 ## License
 
