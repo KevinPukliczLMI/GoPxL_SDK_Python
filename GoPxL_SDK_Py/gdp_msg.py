@@ -75,6 +75,27 @@ def _apply_common(msg: GoGdpMsg, common: GoGdpMsg) -> None:
 
 
 @dataclass(slots=True)
+class GoGdpSignal(GoGdpMsg):
+    """Signals that data on a stream is invalidated."""
+
+
+@dataclass(slots=True)
+class GoGdpNull(GoGdpMsg):
+    error_status: int = 0
+
+    def error_status_value(self) -> int:
+        return self.error_status
+
+
+@dataclass(slots=True)
+class GoGdpHealth(GoGdpMsg):
+    payload_: bytes = field(default_factory=bytes, repr=False)
+
+    def payload(self) -> bytes:
+        return self.payload_
+
+
+@dataclass(slots=True)
 class GoGdpProfileUniform(GoGdpMsg):
     width_: int = 0
     intensity_width_: int = 0
@@ -368,6 +389,30 @@ def parse_gdp_message(msg_type: int, packet: bytes) -> GoGdpMsg:
     reader = KSerializerReader(body)
     mtype = MessageType(msg_type)
     common = GoGdpMsg.parse_common(reader, mtype)
+
+    if mtype == MessageType.SIGNAL:
+        msg = GoGdpSignal(msg_type=mtype)
+        _apply_common(msg, common)
+        if reader.remaining() >= 2:
+            reader.section_u16()
+        msg.raw = packet
+        return msg
+
+    if mtype == MessageType.NULL_TYPE:
+        msg = GoGdpNull(msg_type=mtype)
+        _apply_common(msg, common)
+        section = reader.section_u16()
+        msg.error_status = section.read_i32()
+        msg.raw = packet
+        return msg
+
+    if mtype == MessageType.HEALTH:
+        msg = GoGdpHealth(msg_type=mtype)
+        _apply_common(msg, common)
+        if reader.remaining() > 0:
+            msg.payload_ = reader.read_bytes(reader.remaining())
+        msg.raw = packet
+        return msg
 
     if mtype == MessageType.UNIFORM_PROFILE:
         msg = GoGdpProfileUniform(msg_type=mtype)

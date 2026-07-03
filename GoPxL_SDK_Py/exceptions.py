@@ -19,3 +19,13 @@ class GoRequestError(GoPxLError):
         else:
             self.status = 0
             self.path = ""
+
+
+class GoResourceError(GoPxLError):
+    pass
+
+
+class GoResourceValidationError(GoResourceError):
+    def __init__(self, message: str, errors: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.errors = list(errors or [])

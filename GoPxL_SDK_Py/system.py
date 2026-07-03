@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from .def_ import DEFAULT_CONTROL_PORT, DEFAULT_TRANSACTION_TIMEOUT_MSEC
+from .def_ import DEFAULT_CONTROL_PORT
 from .enums import GoSystemState
 from .exceptions import GoRequestError
 from .instance import GoInstance
@@ -29,7 +29,9 @@ class GoSystem:
         self._control_port = control_port
         self._rest = GoRestClient()
         self._resource_manager = GoResourceManager(self._rest)
-        self._disconnect_handler: Callable[[], None] | None = None
+        self._resource_manager.set_auto_validation(True)
+        self._user_disconnect_handler: Callable[[], None] | None = None
+        self._rest.set_disconnect_handler(self._on_disconnect)
 
     @classmethod
     def from_instance(cls, instance: GoInstance) -> GoSystem:
@@ -59,10 +61,12 @@ class GoSystem:
     def connect(self) -> None:
         if not self._address:
             raise GoRequestError("Address not set")
+        self._resource_manager.reset_connection_state()
         self._rest.connect(self._address, self._control_port)
 
     def disconnect(self) -> None:
         self._rest.disconnect()
+        self._resource_manager.reset_connection_state()
 
     def is_connected(self) -> bool:
         return self._rest.is_connected()
@@ -97,8 +101,12 @@ class GoSystem:
         return self._resource_manager.get_or_create(uri)
 
     def set_disconnect_handler(self, handler: Callable[[], None] | None) -> None:
-        self._disconnect_handler = handler
-        self._rest.set_disconnect_handler(handler)
+        self._user_disconnect_handler = handler
+
+    def _on_disconnect(self) -> None:
+        self._resource_manager.reset_connection_state()
+        if self._user_disconnect_handler is not None:
+            self._user_disconnect_handler()
 
     def sensor_path(self, serial_number: str) -> str:
         response = self._rest.read("/scan/visibleSensors/", args={"expandLevel": 1}).get_response(

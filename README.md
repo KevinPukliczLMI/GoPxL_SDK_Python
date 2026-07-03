@@ -1,6 +1,13 @@
 # GoPxL SDK (Python)
 
-Lightweight Python SDK for **GoPxL / Gocator** sensors. Mirrors the official C++ SDK API (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP parsers, optional `GoResource`).
+Python SDK for programmatic control of **Gocator / GoPxL** sensors. Mirrors the official C++ GoPxL SDK (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP message parsers, and the v1.5 `GoResource` API).
+
+**Version:** 0.3.0
+
+## Requirements
+
+- Python 3.9+
+- [msgpack](https://pypi.org/project/msgpack/) (installed automatically)
 
 ## Install
 
@@ -19,96 +26,147 @@ pip install -e .
 Pin a release tag:
 
 ```bash
-pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git@v0.2.0
+pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git@v0.3.0
+```
+
+After install, import as `gopxl_sdk`:
+
+```python
+import gopxl_sdk
+from gopxl_sdk import GoSystem, GoGdpClient, MessageType
 ```
 
 ## Quick start
 
-```python
-from GoPxL_SDK_Py import GoSystem, GoGdpClient, MessageType
+Connect, start the device, and receive one GDP dataset:
 
-# --- Configuration  ------------------------------------------
+```python
+from gopxl_sdk import GoSystem, GoGdpClient, MessageType
+from gopxl_sdk.enums import GoSystemState
+
 ADDRESS = "192.168.1.10"
 CONTROL_PORT = 3600
 TIMEOUT_MS = 20000
-NO_STOP = False # If True, don't call system.stop() at the end
-# -------------------------------------------------------------------------
 
-print(f"Connecting to {ADDRESS}:{CONTROL_PORT}...")
 system = GoSystem(ADDRESS, CONTROL_PORT)
-try:
-    system.connect()
-except Exception as exc:
-    print("Failed to connect:", exc)
-    raise SystemExit(1)
+system.connect()
 
-# Start the device only if it's not already running 
 started = False
-try:
-    if system.running_state() != system.State.RUNNING:
-        print("Starting device...")
-        system.start()
-        started = True
-    else:
-        print("Device already running — continuing")
-except Exception:
-    try:
-        system.start()
-        started = True
-    except Exception:
-        pass
+if system.running_state() != GoSystemState.RUNNING:
+    system.start()
+    started = True
 
-print("Receiving one GDP dataset...")
-ds = None
-try:
-    gdp = GoGdpClient()
-    gdp.connect(system.address(), system.gdp_port())
-    gdp.receive_data_sync(TIMEOUT_MS)
-    ds = gdp.dataset()
-except Exception as exc:
-    print("GDP receive failed:", exc)
+gdp = GoGdpClient()
+gdp.connect(system.address(), system.gdp_port())
+gdp.receive_data_sync(TIMEOUT_MS)
 
-if not ds:
-    print("No data received")
-else:
-    for msg in ds:
-        if msg.type() == MessageType.MEASUREMENT:
-            val = getattr(msg, "value", None)
-            try:
-                src = msg.data_source_id()
-            except Exception:
-                src = "<unknown>"
-            if isinstance(val, float):
-                print(f"{src}: {val:.6f}")
-            else:
-                print(f"{src}: {val}")
+for msg in gdp.dataset():
+    if msg.type() == MessageType.MEASUREMENT:
+        print(msg.data_source_id(), msg.value)
 
-# Stop the device if this script started it
-if started and not NO_STOP:
-    try:
-        print("Stopping device...")
-        system.stop()
-    except Exception:
-        pass
-
-print("Done.")
+gdp.close()
+if started:
+    system.stop()
+system.disconnect()
 ```
 
-## Features
+Enable Gocator Protocol outputs before receiving GDP data (see `samples/receive_profile.py`).
+
+## Discovery
+
+```python
+from gopxl_sdk import GoDiscoveryClient, GoSystem
+
+discovery = GoDiscoveryClient()
+discovery.blocking_discover(timeout_ms=3000)
+for inst in discovery.instance_list():
+    print(inst.ip_address, inst.app_name, inst.control_port)
+
+    system = GoSystem.from_instance(inst)
+    system.connect()
+    # ...
+    system.disconnect()
+```
+
+## GoResource API (v1.5)
+
+Typed, cached access to REST resources with schema validation and subscriptions:
+
+```python
+from gopxl_sdk import GoSystem
+
+system = GoSystem("192.168.1.10", 3600)
+system.connect()
+
+sensor = system.resource(
+    "/scan/engines/LMILaserLineProfiler/scanners/scanner-0/sensors/sensor-0"
+)
+sensor.cache()
+
+with sensor.scoped_update():
+    sensor.set_string("displayName", "My Sensor")
+    sensor.set_int("/parameters/exposureSettings/singleExposure", 1200)
+
+print(sensor.get_string("displayName"))
+system.disconnect()
+```
+
+See `samples/resource_api/` for subscriptions, schema, and commands.
+
+## Samples
+
+24 sample applications under `samples/` — Python ports of the C++ SDK samples. Each accepts `--ip` and `--port`:
+
+```bash
+cd samples
+python discover.py
+python receive_profile.py --ip 192.168.1.10 --port 3600
+python resource_api/resource_subscriptions.py
+```
+
+Samples bootstrap the SDK from the parent folder via `samples/common/sample_utils.py`, so `pip install` is optional for local development.
+
+Full index: [samples/README.md](samples/README.md)
+
+## API overview
 
 | Component | Description |
 |-----------|-------------|
-| `GoSystem` / `GoRestClient` | REST control, transactions, notification listeners |
-| `GoGdpClient` | GDP TCP streaming |
-| GDP parsers | Profile, Surface, Image, PointCloud, Mesh, Spots, Rendering, Features |
-| `GoDiscoveryClient` | GoPxL UDP 3320 + Classic UDP 3220 (legacy sensors) |
-| `GoResource` / `GoResourceManager` | Optional cached REST helpers |
+| `GoSystem` | Connect, start/stop, GDP port, sensor paths, resource manager |
+| `GoRestClient` | REST CRUD, commands, sub/unsub, streams, notification listeners |
+| `GoGdpClient` | GDP TCP streaming (sync and callback-based async receive) |
+| `GoDataSet` / GDP messages | Profile, surface, image, stamp, measurement, mesh, spots, rendering, features, signal/null/health |
+| `GoDiscoveryClient` | GoPxL UDP discovery (port 3320) and classic Gocator discovery (port 3220) |
+| `GoResource` / `GoResourceManager` | Cached resources, schema validation, subscriptions, HAL children, deferred updates |
+| `GoSchemaValidator` | Client-side JSON Schema validation |
+| Exceptions | `GoRequestError`, `GoChannelError`, `GoResourceError`, `GoResourceValidationError` |
 
-## Requirements
+## Project layout
 
-- Python 3.9+
-- `msgpack`
+```
+GoPxL_SDK_Py/
+  __init__.py          # package entry (import as gopxl_sdk)
+  system.py            # GoSystem
+  rest_client.py       # GoRestClient
+  gdp_client.py        # GoGdpClient
+  gdp_msg.py           # GDP message parsers
+  resource.py          # GoResource
+  resource_manager.py  # GoResourceManager
+  discovery.py         # GoDiscoveryClient
+  pyproject.toml       # pip package metadata (name: gopxl-sdk)
+  samples/             # sample applications
+```
+
+## C++ SDK parity
+
+This SDK covers the main control-plane workflows: REST, discovery, GDP receive, and the GoResource API. A few C++ features are simplified or partial:
+
+- `GoJson` / `GoUri` utility wrappers (Python uses `dict` and `json_pointer` helpers)
+- GDP image parsing and PFNC pixel-format utilities (profiles/surfaces/measurements are solid)
+- C++ async GDP uses a receive thread plus queue; Python uses a single background thread with callbacks
+
+For production image pipelines or maximum GDP throughput, compare behavior with the C++ SDK on your hardware.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — Copyright (C) LMI Technologies Inc.
