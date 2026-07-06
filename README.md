@@ -12,8 +12,24 @@ pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 
 ## Download samples
 
+**Option A — copy from the installed package (recommended):**
+
 ```bash
-git clone --depth 1 --filter=blob:none --sparse https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
+gopxl-copy-samples
+```
+
+Or:
+
+```bash
+python -m gopxl_sdk.copy_samples
+```
+
+This creates a `samples/` folder in your current directory with all `.py` scripts and `common/`.
+
+**Option B — clone from GitHub** (repo layout is `GoPxL_SDK_Py/samples/`):
+
+```bash
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
 cd gopxl-samples
 ```
 
@@ -22,8 +38,11 @@ cd gopxl-samples
 ```bash
 cd samples
 python discover.py
+#or
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
+
+If you used option B, run from `GoPxL_SDK_Py/samples/` instead.
 
 ---
 
@@ -129,7 +148,7 @@ See `samples/resource_api/` for subscriptions, schema, and commands.
 
 ## Samples
 
-Sample applications live under `samples/` — Python ports of the C++ SDK samples. Download them with the sparse clone above, or find them in the repository at `samples/`. Each sample defines `SYSTEM_IP` and `CONTROL_PORT` at the top of the file; override on the command line with `--ip` and `--port`:
+Sample applications are Python ports of the C++ SDK samples. After `pip install`, run `gopxl-copy-samples` to get a local `samples/` folder, or clone them from GitHub (see [Download samples](#download-samples) above). Each sample defines `SYSTEM_IP` and `CONTROL_PORT` at the top of the file; override on the command line with `--ip` and `--port`:
 
 ```bash
 cd samples
@@ -145,11 +164,9 @@ Samples use the installed `gopxl_sdk` package via `samples/common/sample_utils.p
 |--------|-----------|-----------------|
 | SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
 | Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `receive_measurement` |
-| Gocator Snapshot (e.g. G3) | `LMIFringeSnapshot` | `receive_profile`, `receive_surface`, `receive_image` |
+| Gocator Snapshot (e.g. G3) | `LMIFringeSnapshot` | `receive_surface`, `receive_measurement` |
 
 `receive_image.py` and `receive_metrics.py` auto-detect the live engine when possible.
-
-Full index: [samples/README.md](samples/README.md)
 
 ## API overview
 
