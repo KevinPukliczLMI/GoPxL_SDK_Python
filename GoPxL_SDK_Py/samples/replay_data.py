@@ -17,6 +17,11 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "LMILaserLineProfiler"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 RECORDING_PATH = "/replay/recording"
 REPLAY_SEEK_PATH = "/replay/commands/seek"
@@ -36,7 +41,7 @@ def _main(args):
     try:
         client.update(RECORDING_PATH, {"enabled": True}).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
         client.update(
-            su.SCANNER_PATH,
+            PATHS.scanner_path,
             {
                 "parameters": {
                     "triggerSettings": {
@@ -55,7 +60,7 @@ def _main(args):
         system.stop()
         client.update(su.REPLAY_PATH, {"enabled": True}).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
         client.call(REPLAY_SEEK_PATH, {"index": 0}).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
-        gh.run_gdp_receive(system, su.profile_source_id(), "topUniformProfile")
+        gh.run_gdp_receive(system, su.profile_source_id(ENGINE_ID), "topUniformProfile")
     finally:
         system.disconnect()
     return su.OK_STATUS

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -91,6 +92,37 @@ HMI_STATUS = {
 }
 
 INT16_NULL = -32768
+
+
+@dataclass(frozen=True, slots=True)
+class DevicePaths:
+    engine_id: str
+    scanner_id: str
+    sensor_id: str
+    engine_path: str
+    scanner_path: str
+    sensor_path: str
+    outputs_path: str
+    sensors_path: str
+
+
+def device_paths(
+    engine_id: str,
+    scanner_id: str = SCANNER_ID,
+    sensor_id: str = SENSOR_ID,
+) -> DevicePaths:
+    """Build REST paths for a scan engine. Set engine_id at the top of each sample."""
+    scanner_path = f"/scan/engines/{engine_id}/scanners/{scanner_id}"
+    return DevicePaths(
+        engine_id=engine_id,
+        scanner_id=scanner_id,
+        sensor_id=sensor_id,
+        engine_path=f"/scan/engines/{engine_id}",
+        scanner_path=scanner_path,
+        sensor_path=f"{scanner_path}/sensors/{sensor_id}",
+        outputs_path=f"{scanner_path}/outputs",
+        sensors_path=f"{scanner_path}/sensors",
+    )
 
 
 def bootstrap_sdk() -> None:

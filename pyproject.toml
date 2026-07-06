@@ -34,10 +34,6 @@ gopxl_sdk = "."
 
 [tool.setuptools]
 packages = ["gopxl_sdk"]
-include-package-data = true
-
-[tool.setuptools.package-data]
-gopxl_sdk = ["samples/**/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

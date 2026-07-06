@@ -17,7 +17,15 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
 
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 def _main(args):
     from gopxl_sdk import GoSystem
     import time

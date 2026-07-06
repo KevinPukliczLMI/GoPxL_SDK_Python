@@ -17,11 +17,16 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "LMILaserLineProfiler"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
 
-ALIGN_COMMAND_PATH = f"{su.SCANNER_PATH}/commands/align"
-CLEAR_ALIGN_COMMAND_PATH = f"{su.SCANNER_PATH}/commands/clearAlign"
-ALIGNMENT_STATE_PATH = f"{su.SCANNER_PATH}/alignment"
-CALIBRATION_PATH = f"{su.SENSOR_PATH}/transform"
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
+
+ALIGN_COMMAND_PATH = f"{PATHS.scanner_path}/commands/align"
+CLEAR_ALIGN_COMMAND_PATH = f"{PATHS.scanner_path}/commands/clearAlign"
+ALIGNMENT_STATE_PATH = f"{PATHS.scanner_path}/alignment"
+CALIBRATION_PATH = f"{PATHS.sensor_path}/transform"
 ALIGNING_STATUS = 2
 
 

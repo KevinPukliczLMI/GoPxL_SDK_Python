@@ -17,11 +17,16 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 SOFTWARE_TRIGGER_MODE = 3
 SINGLE_EXPOSURE_MODE = 0
 MULTI_EXPOSURE_MODE = 1
-TRIGGER_PATH = f"{su.SCANNER_PATH}/actions/trigger"
+TRIGGER_PATH = f"{PATHS.scanner_path}/actions/trigger"
 DIGITAL_OUTPUT_PORT = f"{su.DIGITAL_OUTPUT_PATH}/devices/device-0/ports/port-0"
 DIO_TRIGGER_EVENTS = {
     1: "Measurement",
@@ -47,7 +52,7 @@ def _main(args):
     try:
         su.print_section("Configuration 1: Update trigger source.")
         payload = {"parameters": {"triggerSettings": {"source": SOFTWARE_TRIGGER_MODE}}}
-        client.update(su.SCANNER_PATH, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
+        client.update(PATHS.scanner_path, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
         system.start()
         client.call(TRIGGER_PATH).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
         system.stop()
@@ -61,9 +66,9 @@ def _main(args):
                 }
             }
         }
-        client.update(su.SENSOR_PATH, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
+        client.update(PATHS.sensor_path, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
         exposure = (
-            client.read(su.SENSOR_PATH).get_response().payload.get("parameters", {})
+            client.read(PATHS.sensor_path).get_response().payload.get("parameters", {})
             .get("exposureSettings", {}).get("singleExposure")
         )
         print(f"Exposure value: {exposure}")
@@ -77,16 +82,16 @@ def _main(args):
                 }
             }
         }
-        client.update(su.SENSOR_PATH, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
+        client.update(PATHS.sensor_path, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
 
         su.print_section("Configuration 4: Update sensor name.")
-        client.update(su.SENSOR_PATH, {"displayName": "Main-Sensor-Change"}).check_response(
+        client.update(PATHS.sensor_path, {"displayName": "Main-Sensor-Change"}).check_response(
             su.REST_COMMAND_TIMEOUT_MSEC
         )
 
         su.print_section("Configuration 5: Change the active area.")
         client.update(
-            su.SENSOR_PATH,
+            PATHS.sensor_path,
             {"parameters": {"activeAreaSettings": {"activeArea": {"width": 3.5}}}},
         ).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
 

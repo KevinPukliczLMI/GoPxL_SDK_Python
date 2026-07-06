@@ -17,15 +17,20 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 def _image_source() -> tuple[str, str]:
     key = "Image"
-    source = f"scan:{su.ENGINE_ID}:{su.SCANNER_ID}:{su.SENSOR_ID}{key}0"
+    source = f"scan:{ENGINE_ID}:{SCANNER_ID}:{SENSOR_ID}{key}0"
     return f'"{source}"', key
 
 
 def _work(system) -> None:
-    gh.setup_live_or_replay(system, su.SCAN_MODE_IMAGE)
+    gh.setup_live_or_replay(system, su.SCAN_MODE_IMAGE, PATHS.scanner_path)
     source_id, source_key = _image_source()
     gh.run_gdp_receive(system, source_id, source_key, su.IMAGE_RECEIVE_TIMEOUT_MSEC)
 

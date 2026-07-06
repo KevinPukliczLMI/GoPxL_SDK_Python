@@ -17,7 +17,15 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
 
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 def _print_schema(label: str, schema: dict) -> None:
     print(f"{label}:")
     for key in ("type", "readOnly", "minimum", "maximum", "enum", "enumText", "units", "title"):
@@ -46,7 +54,7 @@ def _main(args):
 
         _print_schema("runState", system_res.schema_for("/runState"))
 
-        sensor = system.resource(su.SENSOR_PATH)
+        sensor = system.resource(PATHS.sensor_path)
         _print_schema("singleExposure", sensor.schema_for("/parameters/exposureSettings/singleExposure"))
 
         errors: list[str] = []
@@ -73,7 +81,7 @@ def _main(args):
 
         mgr = system.resource_manager()
         print(f"AutoValidation: {mgr.auto_validation()}")
-        scanner = system.resource(su.SCANNER_PATH)
+        scanner = system.resource(PATHS.scanner_path)
         print(f"Scanner validation enabled: {scanner.is_validation_enabled()}")
         _print_schema("trigger source", scanner.schema_for("/parameters/triggerSettings/source"))
     finally:

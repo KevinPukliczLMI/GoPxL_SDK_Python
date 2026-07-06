@@ -17,8 +17,13 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
 
-IMAGE_OUTPUT_PATH = f"{su.OUTPUTS_PATH}/image"
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
+
+IMAGE_OUTPUT_PATH = f"{PATHS.outputs_path}/image"
 TIME_TRIGGER_MODE = 0
 
 
@@ -26,12 +31,11 @@ def _work(system) -> None:
     client = system.client()
     if not gh.is_replay_enabled(system):
         client.update(
-            su.SCANNER_PATH,
+            PATHS.scanner_path,
             {
                 "parameters": {
                     "triggerSettings": {
                         "source": TIME_TRIGGER_MODE,
-                        "frameRate": 10,
                         "maxFrameRateEnabled": False,
                     }
                 }

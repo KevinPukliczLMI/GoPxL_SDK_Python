@@ -17,16 +17,21 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "LMILaserLineProfiler"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 def _work(system) -> None:
-    gh.setup_live_or_replay(system, su.PROFILE_MODE)
+    gh.setup_live_or_replay(system, su.PROFILE_MODE, PATHS.scanner_path)
     if not gh.is_replay_enabled(system):
         client = system.client()
         client.update(
-            su.SCANNER_PATH,
+            PATHS.scanner_path,
             {"parameters": {"scanModeSettings": {"intensityEnabled": True}}},
         ).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
-    gh.run_gdp_receive(system, su.profile_source_id(), "topUniformProfile")
+    gh.run_gdp_receive(system, su.profile_source_id(ENGINE_ID), "topUniformProfile")
 
 
 def _main(args):

@@ -17,12 +17,17 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 import threading
 
 SYSTEM_METRICS_PATH = "/system/metrics"
-SCANNER_METRICS_PATH = f"{su.SCANNER_PATH}/metrics"
-SENSOR_METRICS_PATH = f"{su.SENSOR_PATH}/metrics"
+SCANNER_METRICS_PATH = f"{PATHS.scanner_path}/metrics"
+SENSOR_METRICS_PATH = f"{PATHS.sensor_path}/metrics"
 _print_lock = threading.Lock()
 
 

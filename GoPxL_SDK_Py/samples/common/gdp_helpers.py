@@ -42,12 +42,13 @@ def add_gdp_output(system, source_id: str, output_id: int = 0, auto_shift: bool 
     system.client().call(su.GOCATOR_ADD_OUTPUT_PATH, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
 
 
-def ensure_scan_mode(system, mode: int) -> None:
-    response = system.client().read(su.SCANNER_PATH).get_response(su.REST_COMMAND_TIMEOUT_MSEC)
+def ensure_scan_mode(system, mode: int, scanner_path: str | None = None) -> None:
+    path = scanner_path or su.SCANNER_PATH
+    response = system.client().read(path).get_response(su.REST_COMMAND_TIMEOUT_MSEC)
     current = int(response.payload.get("parameters", {}).get("scanModeSettings", {}).get("scanMode", -1))
     if current != mode:
         payload = {"parameters": {"scanModeSettings": {"scanMode": mode}}}
-        system.client().update(su.SCANNER_PATH, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
+        system.client().update(path, payload).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
 
 
 def connect_gdp(system):
@@ -66,7 +67,7 @@ def start_if_ready(system) -> None:
         system.start()
 
 
-def setup_live_or_replay(system, scan_mode: int | None = None) -> bool:
+def setup_live_or_replay(system, scan_mode: int | None = None, scanner_path: str | None = None) -> bool:
     """Return True when replay is enabled; optionally set scan mode for live data."""
     replay = is_replay_enabled(system)
     if replay:
@@ -74,7 +75,7 @@ def setup_live_or_replay(system, scan_mode: int | None = None) -> bool:
         return True
     print("\nUsing live data")
     if scan_mode is not None:
-        ensure_scan_mode(system, scan_mode)
+        ensure_scan_mode(system, scan_mode, scanner_path)
     return False
 
 

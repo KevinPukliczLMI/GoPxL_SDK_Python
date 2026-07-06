@@ -10,24 +10,9 @@ It is not a full API clone — some C++ types and utilities are simplified or om
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-If `import gopxl_sdk` fails after install, the GitHub repo root `pyproject.toml` may be outdated — use `pyproject.toml.github-root` from this folder as the repo-root `pyproject.toml`, or install locally:
-
-```bash
-cd GoPxL_SDK_Py
-pip install -e .
-```
-
 ## Download samples
 
-After `pip install`, copy samples to your working folder:
-
-```bash
-python -m gopxl_sdk.copy_samples
-```
-
-This creates `./samples/` with all scripts and `common/`.
-
-**Or clone samples from GitHub:**
+Clone the repo without checking out files, then pull only the `samples/` folder:
 
 ```bash
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
@@ -37,15 +22,17 @@ git sparse-checkout set "GoPxL_SDK_Py/samples/*" "GoPxL_SDK_Py/samples/**/*"
 git checkout
 ```
 
+This downloads the sample scripts and `common/` helpers only — not the full SDK source.
+
 ## Run
 
 ```bash
-cd samples
+cd GoPxL_SDK_Py/samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
 
-If you cloned from GitHub (option above), use `cd GoPxL_SDK_Py/samples` instead.
+Each sample defines `SYSTEM_IP` and `CONTROL_PORT` at the top of the file. Override on the command line with `--ip` and `--port`.
 
 ---
 
@@ -151,15 +138,13 @@ See `samples/resource_api/` for subscriptions, schema, and commands.
 
 ## Samples
 
-Sample applications are Python ports of the C++ SDK samples. After `pip install`, run `gopxl-copy-samples` to get a local `samples/` folder, or clone them from GitHub (see [Download samples](#download-samples) above). Each sample defines `SYSTEM_IP` and `CONTROL_PORT` at the top of the file; override on the command line with `--ip` and `--port`:
+Each sample defines `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top of the file. Set `ENGINE_ID` to match your device (`2dscanner` for 1120-M, `LMILaserLineProfiler` for 2530, `LMIFringeSnapshot` for G3 snapshot). Override IP/port on the command line with `--ip` and `--port`.
 
 ```bash
-cd samples
+cd GoPxL_SDK_Py/samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
-
-Samples use the installed `gopxl_sdk` package via `samples/common/sample_utils.py` — no SDK source checkout required.
 
 **Device types**
 

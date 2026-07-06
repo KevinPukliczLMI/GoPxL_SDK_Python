@@ -17,8 +17,13 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "LMILaserLineProfiler"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
 
-SCANNERS_PATH = f"{su.ENGINE_PATH}/scanners"
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
+
+SCANNERS_PATH = f"{PATHS.engine_path}/scanners"
 SENSOR_2_SERIAL = "62984"
 
 
@@ -31,13 +36,13 @@ def _main(args):
     if su.verify_connection(system) == su.ERROR_STATUS:
         system.disconnect()
         return su.ERROR_STATUS
-    if su.ENGINE_ID != "LMILaserLineProfiler":
+    if ENGINE_ID != "LMILaserLineProfiler":
         print("Multi-sensor layout requires LMILaserLineProfiler.")
         system.disconnect()
         return su.ERROR_STATUS
     client = system.client()
     try:
-        engine = client.read(su.ENGINE_PATH).get_response().payload
+        engine = client.read(PATHS.engine_path).get_response().payload
         embedded = (engine.get("_embedded") or {}).get("go:scanner")
         if not embedded:
             print("\nScanner not present, creating scanner...")

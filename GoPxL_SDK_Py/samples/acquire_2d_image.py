@@ -17,18 +17,23 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
+ENGINE_ID = "2dscanner"
+SCANNER_ID = "scanner-0"
+SENSOR_ID = "sensor-0"
+
+PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 SOFTWARE_TRIGGER_MODE = 3
-TRIGGER_ACTION = f"{su.SCANNER_PATH}/actions/trigger"
+TRIGGER_ACTION = f"{PATHS.scanner_path}/actions/trigger"
 
 
 def _work(system) -> None:
     client = system.client()
     client.update(
-        su.SCANNER_PATH,
+        PATHS.scanner_path,
         {"parameters": {"triggerSettings": {"source": SOFTWARE_TRIGGER_MODE}}},
     ).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
-    image_output = f"{su.OUTPUTS_PATH}/image"
+    image_output = f"{PATHS.outputs_path}/image"
     source = client.read(image_output).get_response().payload.get("dataSourceId")
     gh.enable_gocator_protocol(system)
     if source:

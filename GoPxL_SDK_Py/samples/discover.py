@@ -12,20 +12,30 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import gdp_helpers as gh
 from common import sample_utils as su
+
+DISCOVER_TIMEOUT_MSEC = 5000
+
 
 def main() -> int:
     su.bootstrap_sdk()
     from gopxl_sdk import GoDiscoveryClient, GoSystem
+    from gopxl_sdk.discovery import ipv4_interface_addresses
     from gopxl_sdk.exceptions import GoRequestError
 
+    ifaces = ipv4_interface_addresses()
+    print(f"Discovering on local interfaces: {', '.join(ifaces) if ifaces else '(none found)'}")
+    print("Broadcasting on UDP 3320 (GoPxL) and 3220 (classic Gocator)...")
+
     discovery = GoDiscoveryClient()
-    discovery.blocking_discover(su.DISCOVER_TIMEOUT_MSEC, classic_discover=False)
+    discovery.blocking_discover(DISCOVER_TIMEOUT_MSEC, classic_discover=True)
     instances = discovery.instance_list()
-    print(f"Number of sensors on the network: {len(instances)}")
+    print(f"\nNumber of sensors on the network: {len(instances)}")
     if not instances:
-        print("No sensors found. Make sure sensors or GoPxL on PC/GoMax are available and connected.")
+        print(
+            "No sensors found. Ensure the PC and sensor share a subnet, "
+            "disable VPN if needed, and allow UDP 3320/3220 in the firewall."
+        )
         return su.ERROR_STATUS
 
     for index, inst in enumerate(instances, start=1):
