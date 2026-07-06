@@ -30,7 +30,10 @@ dev = [
 ]
 
 [tool.setuptools.package-dir]
-gopxl_sdk = "GoPxL_SDK_Py"
+gopxl_sdk = "."
 
 [tool.setuptools]
 packages = ["gopxl_sdk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

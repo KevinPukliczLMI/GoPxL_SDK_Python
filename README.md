@@ -121,9 +121,12 @@ print(sensor.get_string("displayName"))
 system.disconnect()
 ```
 
-On laser line profilers use the `LMILaserLineProfiler` engine path instead:
+On other device types, swap the engine id in the path:
 
-`/scan/engines/LMILaserLineProfiler/scanners/scanner-0/sensors/sensor-0`
+| Device | Sensor path |
+|--------|-------------|
+| Laser line profiler (e.g. 2530) | `/scan/engines/LMILaserLineProfiler/scanners/scanner-0/sensors/sensor-0` |
+| Gocator Snapshot (e.g. G3) | `/scan/engines/LMIFringeSnapshot/scanners/scanner-0/sensors/sensor-0` |
 
 See `samples/resource_api/` for subscriptions, schema, and commands.
 
@@ -135,8 +138,6 @@ Sample applications live under `samples/` — Python ports of the C++ SDK sample
 cd samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
-python receive_2d_image.py --ip 192.168.1.10
-python resource_api/resource_subscriptions.py --ip 192.168.1.10
 ```
 
 Samples use the installed `gopxl_sdk` package via `samples/common/sample_utils.py` — no SDK source checkout required.
@@ -147,6 +148,7 @@ Samples use the installed `gopxl_sdk` package via `samples/common/sample_utils.p
 |--------|-----------|-----------------|
 | SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
 | Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `receive_measurement` |
+| Gocator Snapshot (e.g. G3) | `LMIFringeSnapshot` | `receive_profile`, `receive_surface`, `receive_image` |
 
 `receive_image.py` and `receive_metrics.py` auto-detect the live engine when possible.
 

@@ -1,14 +1,12 @@
 # GoPxL Python SDK Samples
 
-Runnable examples for the GoPxL Python SDK. Install the library first, then download these scripts.
+Python ports of the GoPxL C++ SDK sample applications.
 
 ## Setup
 
 ```bash
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
-
-Download only this folder (no full SDK source):
 
 ```bash
 git clone --depth 1 --filter=blob:none --sparse https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
@@ -20,8 +18,8 @@ git sparse-checkout set samples
 
 ```bash
 cd samples
-python discover.py
-python receive_profile.py --ip 192.168.1.30 --port 3600
+python discover.py --ip 192.168.1.10 --port 3600
+python receive_profile.py --ip 192.168.1.10
 python receive_2d_image.py --ip 192.168.1.10
 ```
 
