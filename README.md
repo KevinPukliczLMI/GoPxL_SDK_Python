@@ -1,6 +1,8 @@
 # GoPxL SDK (Python)
 
-**Version:** 0.3.0
+Python SDK for **Gocator / GoPxL** sensors. It mirrors the official C++ GoPxL SDK (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP parsers, and the v1.5 `GoResource` API) so you can script sensor control without C++.
+
+It is not a full API clone — some C++ types and utilities are simplified or omitted (see [C++ SDK parity](#c-sdk-parity) below). For common tasks such as connecting, configuring sensors, receiving GDP data, and using the Resource API, it should be a practical alternative for Python workflows.
 
 ## Install
 
@@ -13,7 +15,6 @@ pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```bash
 git clone --depth 1 --filter=blob:none --sparse https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
 cd gopxl-samples
-git sparse-checkout set samples
 ```
 
 ## Run
@@ -22,9 +23,9 @@ git sparse-checkout set samples
 cd samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
----
+```
 
-Python SDK for programmatic control of **Gocator / GoPxL** sensors. Mirrors the official C++ GoPxL SDK (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP message parsers, and the v1.5 `GoResource` API).
+---
 
 ## Requirements
 
@@ -128,7 +129,7 @@ See `samples/resource_api/` for subscriptions, schema, and commands.
 
 ## Samples
 
-Sample applications live under `samples/` — Python ports of the C++ SDK samples. Download them with the sparse clone above, or find them in the repository at `samples/`. Each accepts `--ip` and `--port` (default IP `192.168.1.10`, default port `3600`):
+Sample applications live under `samples/` — Python ports of the C++ SDK samples. Download them with the sparse clone above, or find them in the repository at `samples/`. Each sample defines `SYSTEM_IP` and `CONTROL_PORT` at the top of the file; override on the command line with `--ip` and `--port`:
 
 ```bash
 cd samples

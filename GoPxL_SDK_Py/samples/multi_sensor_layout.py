@@ -15,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import gdp_helpers as gh
 from common import sample_utils as su
 
+SYSTEM_IP = "192.168.1.10"
+CONTROL_PORT = 3600
+
 SCANNERS_PATH = f"{su.ENGINE_PATH}/scanners"
 SENSOR_2_SERIAL = "62984"
 
@@ -59,7 +62,7 @@ def _main(args):
 
 
 def main() -> int:
-    return su.run_main("Configure multi-sensor layout.", _main)
+    return su.run_main("Configure multi-sensor layout.", _main, default_ip=SYSTEM_IP, default_port=CONTROL_PORT)
 
 
 if __name__ == "__main__":

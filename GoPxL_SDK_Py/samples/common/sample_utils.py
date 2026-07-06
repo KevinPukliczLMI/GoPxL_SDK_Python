@@ -72,7 +72,6 @@ METRICS_PATH = f"{TOOL_PATH}/metrics"
 TOOL_OUTPUT_DATA_PATH = f"tools:{TOOL_TYPE}-0:outputs:{TOOL_OUTPUT_NAME}"
 TOP_UNIFORM_PROFILE = f"scan:{ENGINE_ID}:scanner-0:topUniformProfile"
 
-DEFAULT_SYSTEM_IP = "192.168.1.10"
 DEFAULT_CONTROL_PORT = 3600
 
 APPLICATION_TYPES = {
@@ -119,10 +118,15 @@ def bootstrap_sdk() -> None:
     spec.loader.exec_module(module)
 
 
-def parse_args(description: str) -> argparse.Namespace:
+def parse_args(
+    description: str,
+    *,
+    default_ip: str,
+    default_port: int = DEFAULT_CONTROL_PORT,
+) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--ip", default=DEFAULT_SYSTEM_IP, help="Sensor IP address")
-    parser.add_argument("--port", type=int, default=DEFAULT_CONTROL_PORT, help="Control port")
+    parser.add_argument("--ip", default=default_ip, help="Sensor IP address")
+    parser.add_argument("--port", type=int, default=default_port, help="Control port")
     return parser.parse_args()
 
 
@@ -341,11 +345,17 @@ def stamp_source_id(engine_id: str = ENGINE_ID) -> str:
     return f"scan:{engine_id}:scanner-0:stamp"
 
 
-def run_main(description: str, runner) -> int:
+def run_main(
+    description: str,
+    runner,
+    *,
+    default_ip: str,
+    default_port: int = DEFAULT_CONTROL_PORT,
+) -> int:
     bootstrap_sdk()
     from gopxl_sdk.exceptions import GoChannelError, GoRequestError
 
-    args = parse_args(description)
+    args = parse_args(description, default_ip=default_ip, default_port=default_port)
     try:
         return runner(args)
     except GoRequestError as exc:

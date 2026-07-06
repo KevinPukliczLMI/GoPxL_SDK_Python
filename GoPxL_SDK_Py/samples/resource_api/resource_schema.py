@@ -15,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import gdp_helpers as gh
 from common import sample_utils as su
 
+SYSTEM_IP = "192.168.1.10"
+CONTROL_PORT = 3600
+
 def _print_schema(label: str, schema: dict) -> None:
     print(f"{label}:")
     for key in ("type", "readOnly", "minimum", "maximum", "enum", "enumText", "units", "title"):
@@ -79,7 +82,7 @@ def _main(args):
 
 
 def main() -> int:
-    return su.run_main("GoResource schema sample.", _main)
+    return su.run_main("GoResource schema sample.", _main, default_ip=SYSTEM_IP, default_port=CONTROL_PORT)
 
 
 if __name__ == "__main__":

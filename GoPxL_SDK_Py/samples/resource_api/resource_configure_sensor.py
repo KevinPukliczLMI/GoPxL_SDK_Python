@@ -15,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import gdp_helpers as gh
 from common import sample_utils as su
 
+SYSTEM_IP = "192.168.1.10"
+CONTROL_PORT = 3600
+
 SOFTWARE_TRIGGER_MODE = 3
 SINGLE_EXPOSURE_MODE = 0
 MULTI_EXPOSURE_MODE = 1
@@ -68,7 +71,7 @@ def _main(args):
 
 
 def main() -> int:
-    return su.run_main("Configure sensor via GoResource.", _main)
+    return su.run_main("Configure sensor via GoResource.", _main, default_ip=SYSTEM_IP, default_port=CONTROL_PORT)
 
 
 if __name__ == "__main__":
