@@ -10,29 +10,66 @@ It is not a full API clone — some C++ types and utilities are simplified or om
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-## Download samples
+## Get samples
 
-Clone the repo without checking out files, then pull only the `samples/` folder:
+### Clone from GitHub
+
+Shallow clone the default branch (no branch checkout needed):
 
 ```bash
-git clone --depth 1 --filter=blob:none --no-checkout https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
-cd gopxl-samples
-git sparse-checkout init --no-cone
-git sparse-checkout set "GoPxL_SDK_Py/samples/*" "GoPxL_SDK_Py/samples/**/*"
-git checkout
+git clone --depth 1 https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-This downloads the sample scripts and `common/` helpers only — not the full SDK source.
+Copy samples into your project:
+
+```bash
+# Linux / macOS
+cp -r GoPxL_SDK_Python/GoPxL_SDK_Py/samples ./samples
+
+# Windows (cmd)
+xcopy /E /I GoPxL_SDK_Python\GoPxL_SDK_Py\samples samples
+```
+
+Or let the SDK do the clone for you:
+
+```bash
+python -m gopxl --from-github
+```
+
+### From pip install
+
+From your project folder (not inside the SDK source tree):
+
+```bash
+python -m gopxl
+```
+
+This copies bundled samples into `./samples`.
+
+Alternatives:
+
+```bash
+gopxl-copy-samples
+python -m gopxl_sdk --from-github
+python -m gopxl_sdk.copy_samples --from-github
+```
+
+Optional output path (positional, not `--destination`):
+
+```bash
+python -m gopxl ./my_samples
+python -m gopxl --from-github ./my_samples
+```
 
 ## Run
 
 ```bash
-cd GoPxL_SDK_Py/samples
+cd samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
 
-Each sample defines `SYSTEM_IP` and `CONTROL_PORT` at the top of the file. Override on the command line with `--ip` and `--port`.
+Each sample defines `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top of the file. Override on the command line with `--ip` and `--port`.
 
 ---
 
@@ -141,7 +178,7 @@ See `samples/resource_api/` for subscriptions, schema, and commands.
 Each sample defines `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top of the file. Set `ENGINE_ID` to match your device (`2dscanner` for 1120-M, `LMILaserLineProfiler` for 2530, `LMIFringeSnapshot` for G3 snapshot). Override IP/port on the command line with `--ip` and `--port`.
 
 ```bash
-cd GoPxL_SDK_Py/samples
+cd samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
@@ -199,11 +236,9 @@ pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git@v0.3.0
 
 ## For SDK developers
 
-Clone the full repository only if you are modifying the SDK itself:
+From a local copy of `GoPxL_SDK_Py/`:
 
 ```bash
-git clone https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
-cd GoPxL_SDK_Python
 pip install -e .
 ```
 
