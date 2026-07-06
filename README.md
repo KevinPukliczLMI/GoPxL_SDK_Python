@@ -22,10 +22,6 @@ git sparse-checkout set samples
 cd samples
 python discover.py
 python receive_profile.py --ip 192.168.1.10 --port 3600
-python receive_2d_image.py --ip 192.168.1.10
-python resource_api/resource_subscriptions.py --ip 192.168.1.10
-```
-
 ---
 
 Python SDK for programmatic control of **Gocator / GoPxL** sensors. Mirrors the official C++ GoPxL SDK (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP message parsers, and the v1.5 `GoResource` API).
