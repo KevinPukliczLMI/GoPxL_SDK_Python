@@ -20,21 +20,12 @@ def main() -> int:
     from gopxl_sdk import GoDiscoveryClient, GoSystem
     from gopxl_sdk.exceptions import GoRequestError
 
-    from gopxl_sdk.discovery import _ipv4_interface_addresses
-
-    ifaces = _ipv4_interface_addresses()
-    print(f"Local interfaces used for discovery: {', '.join(ifaces) if ifaces else '(none)'}")
-
     discovery = GoDiscoveryClient()
-    # classic_discover=True also scans legacy Gocator UDP 3220 (in addition to GoPxL 3320).
-    discovery.blocking_discover(su.DISCOVER_TIMEOUT_MSEC, classic_discover=True)
+    discovery.blocking_discover(su.DISCOVER_TIMEOUT_MSEC, classic_discover=False)
     instances = discovery.instance_list()
     print(f"Number of sensors on the network: {len(instances)}")
     if not instances:
         print("No sensors found. Make sure sensors or GoPxL on PC/GoMax are available and connected.")
-        print("Discovery requires this PC to share a subnet with the sensor (broadcast cannot cross routers).")
-        print("Default sensor IP is 192.168.1.10 — add a matching interface address if needed.")
-        print("Also allow UDP 3320 (GoPxL) and 3220 (classic) in Windows Firewall.")
         return su.ERROR_STATUS
 
     for index, inst in enumerate(instances, start=1):

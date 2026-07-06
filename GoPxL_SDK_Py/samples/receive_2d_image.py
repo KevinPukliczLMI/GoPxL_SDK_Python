@@ -1,10 +1,6 @@
 """
 Receive 2D camera images via GDP.
 
-Designed for Gocator 1120-M and similar machine-vision cameras (engine id
-``2dscanner``). Laser line profilers use receive_profile.py / receive_image.py
-instead.
-
 GoPxL Python SDK sample - port of the C++ sample.
 Copyright (C) 2022-2026 by LMI Technologies Inc. Licensed under the MIT License.
 """
@@ -19,37 +15,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import gdp_helpers as gh
 from common import sample_utils as su
 
+IMAGE_OUTPUT_PATH = f"{su.OUTPUTS_PATH}/image"
 TIME_TRIGGER_MODE = 0
-IMAGE_SOURCE = su.IMAGE_SOURCE_2D
-SENSOR_2D_PATH = su.SENSOR_PATH_2D
 
 
 def _work(system) -> None:
     client = system.client()
-    system.stop()
-
     if not gh.is_replay_enabled(system):
-        # Match C++ Receive2dImage: only set trigger source (do not force frameRate —
-        # sensors reject values above their maximum).
-        print("\nConfiguring time trigger...")
         client.update(
-            SENSOR_2D_PATH,
-            {"/parameters/triggerSettings/source": TIME_TRIGGER_MODE},
+            su.SCANNER_PATH,
+            {
+                "parameters": {
+                    "triggerSettings": {
+                        "source": TIME_TRIGGER_MODE,
+                        "frameRate": 10,
+                        "maxFrameRateEnabled": False,
+                    }
+                }
+            },
         ).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
-
-    image_output = f"{su.OUTPUTS_PATH_2D}/image"
-    try:
-        response = client.read(image_output).get_response().payload
-        source = response.get("dataSourceId") or IMAGE_SOURCE
-    except Exception:
-        source = IMAGE_SOURCE
+    response = client.read(IMAGE_OUTPUT_PATH).get_response().payload
+    source = response.get("dataSourceId")
     print(f"Image data source: {source}")
-
     gh.enable_gocator_protocol(system)
-    if not gh.output_has_source(system, "image"):
-        gh.add_gdp_output(system, source)
-
-    print("\nConnecting to Gocator Protocol...")
+    if source and not gh.output_has_source(system, "image"):
+        gh.add_gdp_output(system, f'"{source}"')
     gdp = gh.connect_gdp(system)
     gh.start_if_ready(system)
     gdp.receive_data_sync(su.IMAGE_RECEIVE_TIMEOUT_MSEC)
@@ -58,7 +48,7 @@ def _work(system) -> None:
     system.stop()
 
 
-def _main(args) -> int:
+def _main(args):
     from gopxl_sdk import GoSystem
 
     system = GoSystem()
@@ -68,13 +58,6 @@ def _main(args) -> int:
         system.disconnect()
         return su.ERROR_STATUS
     try:
-        engine_id = su.resolve_engine_id(system, preferred=su.ENGINE_ID_2D)
-        print(f"\nUsing scan engine: {engine_id}")
-        if engine_id != su.ENGINE_ID_2D:
-            print(
-                "Warning: this sample targets 2dscanner (SmartCam / 1120-M). "
-                f"Found '{engine_id}' instead — acquisition may fail."
-            )
         _work(system)
     finally:
         system.disconnect()

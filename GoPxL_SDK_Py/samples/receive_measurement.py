@@ -16,10 +16,8 @@ from common import gdp_helpers as gh
 from common import sample_utils as su
 
 def _work(system) -> None:
-    # Requires a tool measurement output already enabled and added to GDP
-    # (see configure_tool.py / resource_api/resource_configure_tool.py).
     gh.setup_live_or_replay(system)
-    gh.run_gdp_receive(system, su.TOOL_OUTPUT_DATA_PATH, su.TOOL_OUTPUT_DATA_PATH)
+    gh.run_gdp_receive(system, f'"{su.TOOL_OUTPUT_DATA_PATH}"', su.TOOL_OUTPUT_DATA_PATH)
 
 
 def _main(args):

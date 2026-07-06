@@ -60,7 +60,14 @@ def _main(args):
 
         gocator = system.resource(su.GOCATOR_CONTROL_PATH)
         gocator.set_bool("/enabled", True)
-        gh.add_gdp_output(system, su.TOOL_OUTPUT_DATA_PATH, output_id=1)
+        add_outputs = system.resource(su.GOCATOR_ADD_OUTPUT_PATH)
+        add_outputs.call(
+            {
+                "source": su.TOOL_OUTPUT_DATA_PATH,
+                "outputId": 1,
+                "autoShift": True,
+            }
+        )
     finally:
         system.disconnect()
     return su.OK_STATUS

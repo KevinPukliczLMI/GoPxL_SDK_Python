@@ -15,7 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import gdp_helpers as gh
 from common import sample_utils as su
 
-ARRAY_PROFILE_SOURCE = f"scan:{su.ENGINE_ID}:scanner-0:topUniformProfileArray"
+ARRAY_PROFILE_SOURCE = (
+    f'"scan:{su.ENGINE_ID}:scanner-0:topUniformProfileArray"'
+)
 REMOVE_ALL_PATH = "/controls/gocator/outputs/commands/removeAll"
 
 

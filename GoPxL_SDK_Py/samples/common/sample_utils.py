@@ -95,8 +95,14 @@ INT16_NULL = -32768
 
 
 def bootstrap_sdk() -> None:
+    """Load gopxl_sdk from pip install, or from the parent repo when developing locally."""
     if "gopxl_sdk" in sys.modules:
         return
+    try:
+        import gopxl_sdk  # noqa: F401
+        return
+    except ImportError:
+        pass
     sdk_root = Path(__file__).resolve().parents[2]
     spec = importlib.util.spec_from_file_location(
         "gopxl_sdk",
@@ -104,7 +110,10 @@ def bootstrap_sdk() -> None:
         submodule_search_locations=[str(sdk_root)],
     )
     if spec is None or spec.loader is None:
-        raise ImportError(f"Unable to load gopxl_sdk from {sdk_root}")
+        raise ImportError(
+            "gopxl_sdk is not installed. Run: "
+            "pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules["gopxl_sdk"] = module
     spec.loader.exec_module(module)

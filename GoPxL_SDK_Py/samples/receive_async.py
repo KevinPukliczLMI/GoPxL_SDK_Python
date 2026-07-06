@@ -1,10 +1,6 @@
 """
 Receive stamp data asynchronously via GDP.
 
-Uses GoGdpClient.receive_data_async: a receive thread reads the socket and
-enqueues complete datasets; a separate thread runs the callback so slow
-handlers do not block reception (same model as the C++ SDK).
-
 GoPxL Python SDK sample - port of the C++ sample.
 Copyright (C) 2022-2026 by LMI Technologies Inc. Licensed under the MIT License.
 """
@@ -12,13 +8,15 @@ Copyright (C) 2022-2026 by LMI Technologies Inc. Licensed under the MIT License.
 from __future__ import annotations
 
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import gdp_helpers as gh
 from common import sample_utils as su
+
+import threading
+import time
 
 
 def _on_data(dataset) -> None:

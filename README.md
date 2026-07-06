@@ -1,40 +1,66 @@
 # GoPxL SDK (Python)
 
-Python SDK for programmatic control of **Gocator / GoPxL** sensors. Mirrors the official C++ GoPxL SDK (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP message parsers, and the v1.5 `GoResource` API).
+Python SDK for programmatic control of **Gocator / GoPxL** sensors — connect, configure, and receive profile, surface, image, and measurement data over REST and GDP.
 
 **Version:** 0.3.0
 
 ## Requirements
 
 - Python 3.9+
-- [msgpack](https://pypi.org/project/msgpack/) (installed automatically)
+- [msgpack](https://pypi.org/project/msgpack/) (installed automatically with the SDK)
 
-## Install
+## Get started
+
+### 1. Install the SDK
 
 ```bash
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-Editable local install:
-
-```bash
-git clone https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
-cd GoPxL_SDK_Python
-pip install -e .
-```
-
-Pin a release tag:
+Pin a release:
 
 ```bash
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git@v0.3.0
 ```
 
-After install, import as `gopxl_sdk`:
+Import in your project:
 
 ```python
-import gopxl_sdk
 from gopxl_sdk import GoSystem, GoGdpClient, MessageType
 ```
+
+No source checkout is required — `pip` installs the library into your Python environment.
+
+### 2. Get the sample scripts (optional)
+
+Sample applications are separate from the library. Download **only** the `samples/` folder if you want runnable examples without cloning the full SDK source:
+
+```bash
+git clone --depth 1 --filter=blob:none --sparse https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
+cd gopxl-samples
+git sparse-checkout set samples
+```
+
+On Windows (PowerShell), the same commands work if Git 2.25+ is installed.
+
+### 3. Run a sample
+
+```bash
+cd samples
+python discover.py
+python receive_profile.py --ip 192.168.1.30 --port 3600
+python receive_2d_image.py --ip 192.168.1.10
+python resource_api/resource_subscriptions.py
+```
+
+Each sample accepts `--ip` and `--port`. Samples use the installed `gopxl_sdk` package — you do not need the SDK source on disk.
+
+| Device | Engine id | Try these samples |
+|--------|-----------|-------------------|
+| Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `receive_measurement` |
+| SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
+
+Full sample index: [samples/README.md](samples/README.md)
 
 ## Quick start
 
@@ -74,7 +100,7 @@ Enable Gocator Protocol and add GDP outputs before receiving data (see `samples/
 
 ## Discovery
 
-UDP discovery binds to port **3320** and broadcasts from each local interface (same model as the C++ SDK):
+UDP discovery binds to port **3320** and broadcasts from each local interface:
 
 ```python
 from gopxl_sdk import GoDiscoveryClient, GoSystem
@@ -115,36 +141,11 @@ print(sensor.get_string("displayName"))
 system.disconnect()
 ```
 
-On SmartCam / 1120-M devices use the `2dscanner` engine path instead, for example:
+On SmartCam / 1120-M devices use the `2dscanner` engine path instead:
 
 `/scan/engines/2dscanner/scanners/scanner-0/sensors/sensor-0`
 
 See `samples/resource_api/` for subscriptions, schema, and commands.
-
-## Samples
-
-Sample applications live under `samples/` — Python ports of the C++ SDK samples. Each accepts `--ip` and `--port`:
-
-```bash
-cd samples
-python discover.py
-python receive_profile.py --ip 192.168.1.30 --port 3600
-python receive_2d_image.py --ip 192.168.1.10
-python resource_api/resource_subscriptions.py
-```
-
-Samples bootstrap the SDK from the parent folder via `samples/common/sample_utils.py`, so `pip install` is optional for local development.
-
-**Device types**
-
-| Device | Engine id | Typical samples |
-|--------|-----------|-----------------|
-| Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `receive_measurement` |
-| SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
-
-`receive_image.py` and `receive_metrics.py` auto-detect the live engine when possible.
-
-Full index: [samples/README.md](samples/README.md)
 
 ## API overview
 
@@ -159,27 +160,15 @@ Full index: [samples/README.md](samples/README.md)
 | `GoSchemaValidator` | Client-side JSON Schema validation |
 | Exceptions | `GoRequestError`, `GoChannelError`, `GoResourceError`, `GoResourceValidationError` |
 
-## Project layout
+## For SDK developers
 
+Clone the full repository only if you are modifying the SDK itself:
+
+```bash
+git clone https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
+cd GoPxL_SDK_Python
+pip install -e .
 ```
-GoPxL_SDK_Py/
-  __init__.py          # package entry (import as gopxl_sdk)
-  system.py            # GoSystem
-  rest_client.py       # GoRestClient
-  gdp_client.py        # GoGdpClient
-  gdp_msg.py           # GDP message parsers
-  resource.py          # GoResource
-  resource_manager.py  # GoResourceManager
-  discovery.py         # GoDiscoveryClient
-  pyproject.toml       # pip package metadata (name: gopxl-sdk)
-  samples/             # sample applications
-```
-
-## C++ SDK parity
-
-This SDK covers the main control-plane workflows: REST, discovery, GDP receive (profiles, surfaces, images, measurements), async GDP with a receive/queue/callback thread model, and the GoResource API.
-
-GDP common-header transform (3×4 `f32`) and bounding box (6×`f32`) are parsed for wire alignment. Public `GoGdpTransform` / `GoGdpBoundingBox` types and `GoJson` / `GoUri` wrappers are not exposed; Python uses `dict` and `json_pointer` helpers instead.
 
 ## License
 

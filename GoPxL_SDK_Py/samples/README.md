@@ -1,43 +1,51 @@
 # GoPxL Python SDK Samples
 
-Python ports of the GoPxL C++ SDK sample applications. Run any sample with:
+Runnable examples for the GoPxL Python SDK. Install the library first, then download these scripts.
+
+## Setup
 
 ```bash
-python samples/<sample>.py --ip 192.168.1.10 --port 3600
+pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-Shared helpers live in `samples/common/` (`sample_utils.py`, `gdp_helpers.py`).
+Download only this folder (no full SDK source):
 
-## Device types
+```bash
+git clone --depth 1 --filter=blob:none --sparse https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
+cd gopxl-samples
+git sparse-checkout set samples
+```
 
-| Device | Engine id | Use these samples |
-|--------|-----------|-------------------|
-| Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `configure_sensor`, `configure_tool`, … |
-| SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
+## Run
 
-`receive_image.py` and `receive_metrics.py` auto-detect the live engine when possible.
+```bash
+cd samples
+python discover.py
+python receive_profile.py --ip 192.168.1.30 --port 3600
+python receive_2d_image.py --ip 192.168.1.10
+```
 
-## Sample index
+Shared helpers live in `common/`.
 
 | Sample | Description |
 | --- | --- |
-| `discover.py` | Discover GoPxL instances and visible sensors (UDP 3320 + classic 3220) |
+| `discover.py` | Discover GoPxL instances and visible sensors on the network |
 | `configure_sensor.py` | Configure triggers, exposure, active area, and digital I/O |
 | `configure_tool.py` | Add and configure a Profile Bounding Box tool |
 | `receive_profile.py` | Receive uniform profile data via GDP |
 | `receive_surface.py` | Receive surface data via GDP |
-| `receive_image.py` | Receive image data (profiler heightmap or SmartCam 2D, auto-detected) |
+| `receive_image.py` | Receive heightmap image data via GDP |
 | `receive_measurement.py` | Receive tool measurement output via GDP |
 | `receive_string.py` | Receive tool string output via GDP |
-| `receive_metrics.py` | Stream REST metrics (uptime, CPU, temps, latency) |
-| `receive_async.py` | Receive GDP data asynchronously (queued callback thread) |
-| `receive_2d_image.py` | Receive 2D camera images via GDP (`2dscanner`) |
-| `acquire_2d_image.py` | Acquire 2D image with ImageFilter tool (`2dscanner`) |
+| `receive_metrics.py` | Stream REST metrics with callbacks |
+| `receive_async.py` | Receive GDP data asynchronously |
+| `receive_2d_image.py` | Receive 2D camera images via GDP |
+| `acquire_2d_image.py` | Software-trigger 2D image acquisition |
 | `save_job.py` | Save, rename, download, and load jobs |
-| `replay_data.py` | Enable replay and receive GDP data |
+| `replay_data.py` | Record live data and replay via GDP |
 | `backup_restore.py` | Archive and restore sensor configuration |
 | `align_sensor.py` | Run alignment and read calibration transform |
-| `system_upgrade.py` | Inspect firmware upgrade status / packages |
+| `system_upgrade.py` | Upload firmware package (`upgrade_archive.dat`) |
 | `multi_sensor_layout.py` | Multi-sensor scanner layout setup |
 | `multilayer_outputs.py` | Multilayer profile array GDP output |
 | `resource_api/resource_subscriptions.py` | Subscriptions, caching, child URIs |

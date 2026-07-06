@@ -20,7 +20,7 @@ STRING_OUTPUT_DATA_PATH = f"tools:{su.TOOL_TYPE}-0:outputs:String"
 
 def _work(system) -> None:
     gh.setup_live_or_replay(system)
-    gh.run_gdp_receive(system, STRING_OUTPUT_DATA_PATH, STRING_OUTPUT_DATA_PATH)
+    gh.run_gdp_receive(system, f'"{STRING_OUTPUT_DATA_PATH}"', STRING_OUTPUT_DATA_PATH)
 
 
 def _main(args):
