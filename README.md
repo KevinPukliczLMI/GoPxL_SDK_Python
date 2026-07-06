@@ -10,27 +10,31 @@ It is not a full API clone — some C++ types and utilities are simplified or om
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-## Download samples
-
-**Option A — copy from the installed package (recommended):**
+If `import gopxl_sdk` fails after install, the GitHub repo root `pyproject.toml` may be outdated — use `pyproject.toml.github-root` from this folder as the repo-root `pyproject.toml`, or install locally:
 
 ```bash
-gopxl-copy-samples
+cd GoPxL_SDK_Py
+pip install -e .
 ```
 
-Or:
+## Download samples
+
+After `pip install`, copy samples to your working folder:
 
 ```bash
 python -m gopxl_sdk.copy_samples
 ```
 
-This creates a `samples/` folder in your current directory with all `.py` scripts and `common/`.
+This creates `./samples/` with all scripts and `common/`.
 
-**Option B — clone from GitHub** (repo layout is `GoPxL_SDK_Py/samples/`):
+**Or clone samples from GitHub:**
 
 ```bash
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/kevinpuklicz/GoPxL_SDK_Python.git gopxl-samples
 cd gopxl-samples
+git sparse-checkout init --no-cone
+git sparse-checkout set "GoPxL_SDK_Py/samples/*" "GoPxL_SDK_Py/samples/**/*"
+git checkout
 ```
 
 ## Run
@@ -38,11 +42,10 @@ cd gopxl-samples
 ```bash
 cd samples
 python discover.py
-#or
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
 
-If you used option B, run from `GoPxL_SDK_Py/samples/` instead.
+If you cloned from GitHub (option above), use `cd GoPxL_SDK_Py/samples` instead.
 
 ---
 

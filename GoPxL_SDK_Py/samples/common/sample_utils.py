@@ -103,9 +103,15 @@ def bootstrap_sdk() -> None:
     except ImportError:
         pass
     sdk_root = Path(__file__).resolve().parents[2]
+    init_py = sdk_root / "__init__.py"
+    if not init_py.is_file():
+        raise ImportError(
+            "gopxl_sdk is not installed. Run:\n"
+            "  pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git"
+        )
     spec = importlib.util.spec_from_file_location(
         "gopxl_sdk",
-        sdk_root / "__init__.py",
+        init_py,
         submodule_search_locations=[str(sdk_root)],
     )
     if spec is None or spec.loader is None:

@@ -29,9 +29,6 @@ dev = [
     "pytest>=7.0",
 ]
 
-[project.scripts]
-gopxl-copy-samples = "gopxl_sdk.copy_samples:main"
-
 [tool.setuptools.package-dir]
 gopxl_sdk = "."
 
