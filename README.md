@@ -66,6 +66,7 @@ python -m gopxl --from-github ./my_samples
 ```bash
 cd samples
 python discover.py
+#or
 python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
 
