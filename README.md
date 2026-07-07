@@ -29,7 +29,7 @@ python receive_profile.py
 Each script has `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top. Override the IP on the command line:
 
 ```bash
-python receive_profile.py --ip 192.168.1.10 --port 3600
+python receive_profile.py --ip 192.168.1.30 --port 3600
 ```
 
 ---
@@ -74,47 +74,15 @@ python receive_profile.py --ip 192.168.1.10 --port 3600
 
 ## Example code
 
-Connect, receive GDP measurements, and disconnect:
+The samples are the best starting point. After `pip install`, each script loads the SDK and connects to the sensor — edit `SYSTEM_IP` at the top and run:
 
-```python
-from gopxl_sdk import GoSystem, GoGdpClient, MessageType
-from gopxl_sdk.enums import GoSystemState
-
-system = GoSystem("192.168.1.10", 3600)
-system.connect()
-
-if system.running_state() != GoSystemState.RUNNING:
-    system.start()
-
-gdp = GoGdpClient()
-gdp.connect(system.address(), system.gdp_port())
-gdp.receive_data_sync(20000)
-
-for msg in gdp.dataset():
-    if msg.type() == MessageType.MEASUREMENT:
-        print(msg.data_source_id(), msg.value)
-
-gdp.close()
-system.stop()
-system.disconnect()
-```
-
-Discover sensors on the network:
-
-```python
-from gopxl_sdk import GoDiscoveryClient
-
-discovery = GoDiscoveryClient()
-discovery.blocking_discover(timeout_ms=3000, classic_discover=True)
-for inst in discovery.instance_list():
-    print(inst.ip_address, inst.app_name)
-```
+For your own application, copy the pattern from `samples/receive_measurement.py` or `samples/discover.py` (they call `bootstrap_sdk()` then import `GoSystem`, `GoGdpClient`, etc. from the installed package).
 
 ---
 
 ## SDK files
 
-After `pip install`, these are the main `gopxl_sdk` Python modules:
+These modules live in `GoPxL_SDK_Py/` in the repo:
 
 | File | What it does |
 |------|----------------|
@@ -139,33 +107,10 @@ After `pip install`, these are the main `gopxl_sdk` Python modules:
 | `exceptions.py` | `GoRequestError`, `GoChannelError`, `GoResourceError`, etc. |
 | `def_.py` | Default ports and shared constants |
 
-**Main classes you import:**
-
-```python
-from gopxl_sdk import (
-    GoSystem,           # system.py
-    GoRestClient,       # rest_client.py
-    GoGdpClient,        # gdp_client.py
-    GoDiscoveryClient,  # discovery.py
-    GoResource,         # resource.py
-    GoDataSet,          # dataset.py
-    MessageType,        # enums.py
-)
 ```
-
-```
-gopxl_sdk/
-  system.py              GoSystem
-  rest_client.py         REST client
-  gdp_client.py          GDP client
-  gdp_msg.py             GDP parsers
-  dataset.py             GDP datasets
-  discovery.py           Network discovery
-  resource.py            GoResource API
-  resource_manager.py    Resource cache/manager
-  enums.py               Status codes and message types
-  exceptions.py          SDK errors
-  samples/               Bundled sample scripts
+GoPxL_SDK_Python/
+  GoPxL_SDK_Py/          # SDK source (system.py, gdp_client.py, ...)
+    samples/             # Sample scripts (clone and run from here)
 ```
 
 ---
