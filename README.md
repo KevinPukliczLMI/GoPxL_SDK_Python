@@ -67,6 +67,7 @@ python receive_profile.py --ip 192.168.1.30 --port 3600
 |--------|-------------|----------------------|
 | SmartCam / 2D (e.g. 1120-M) | `2dscanner` | `acquire_2d_image`, `receive_2d_image` |
 | Laser profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface` |
+| Gocator Confocal (G4 / G5) | `LMIConfocalLineProfiler` | `multilayer_outputs`, `receive_profile`, `receive_surface` |
 | Snapshot (e.g. G3) | `LMIFringeSnapshot` | `receive_surface`, `receive_measurement` |
 
 ---
@@ -79,7 +80,7 @@ Connect, receive GDP measurements, and disconnect:
 from gopxl_sdk import GoSystem, GoGdpClient, MessageType
 from gopxl_sdk.enums import GoSystemState
 
-system = GoSystem("192.168.1.30", 3600)
+system = GoSystem("192.168.1.10", 3600)
 system.connect()
 
 if system.running_state() != GoSystemState.RUNNING:
