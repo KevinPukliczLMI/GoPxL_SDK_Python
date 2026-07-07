@@ -1,6 +1,6 @@
 # GoPxL SDK (Python)
 
-Python SDK for Gocator / GoPxL sensors — REST control, GDP data streaming, discovery, and the GoResource API.
+Python SDK for Gocator sensors — REST control, GDP data streaming, discovery, and the GoResource API.
 
 ## 1. Install the SDK
 
@@ -10,27 +10,19 @@ pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 
 Requires Python 3.9+. The `msgpack` dependency is installed automatically.
 
-## 2. Copy the samples folder
-
-From any project directory:
+## 2. Clone the samples folder
 
 ```bash
-python -m gopxl_sdk
+git clone https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-This copies the full bundled `samples/` tree into `./samples` (including `common/` helpers).
-
-To use a different folder:
-
-```bash
-python -m gopxl_sdk ./my_samples
-```
+This gives you the full `samples/` tree from the repo — same files, same layout, including `common/`.
 
 ## 3. Run a sample
 
 ```bash
-cd samples
 python discover.py
+#or
 python receive_profile.py
 ```
 
@@ -145,8 +137,6 @@ After `pip install`, these are the main `gopxl_sdk` Python modules:
 | `enums.py` | `GoStatus`, `GoSystemState`, `MessageType`, `GoRequestMethod`, etc. |
 | `exceptions.py` | `GoRequestError`, `GoChannelError`, `GoResourceError`, etc. |
 | `def_.py` | Default ports and shared constants |
-| `copy_samples.py` | Copies bundled `samples/` to a local folder |
-| `__main__.py` | Entry point for `python -m gopxl_sdk` |
 
 **Main classes you import:**
 
