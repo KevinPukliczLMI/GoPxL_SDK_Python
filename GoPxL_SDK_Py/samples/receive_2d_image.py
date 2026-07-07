@@ -45,8 +45,8 @@ def _work(system) -> None:
     source = response.get("dataSourceId")
     print(f"Image data source: {source}")
     gh.enable_gocator_protocol(system)
-    if source and not gh.output_has_source(system, "image"):
-        gh.add_gdp_output(system, f'"{source}"')
+    if source:
+        gh.ensure_gdp_output(system, str(source), "image")
     gdp = gh.connect_gdp(system)
     gh.start_if_ready(system)
     gdp.receive_data_sync(su.IMAGE_RECEIVE_TIMEOUT_MSEC)

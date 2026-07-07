@@ -1,5 +1,5 @@
-# Use this as pyproject.toml at the GitHub repo root.
-# Repo layout: GoPxL_SDK_Python/pyproject.toml + GoPxL_SDK_Python/GoPxL_SDK_Py/...
+# Copy to repo root as pyproject.toml when publishing on GitHub.
+# Repo layout: pyproject.toml + GoPxL_SDK_Py/
 
 [build-system]
 requires = ["setuptools>=61", "wheel"]
@@ -21,10 +21,9 @@ gopxl-copy-samples = "gopxl_sdk.copy_samples:main"
 
 [tool.setuptools.package-dir]
 gopxl_sdk = "GoPxL_SDK_Py"
-gopxl = "GoPxL_SDK_Py/gopxl"
 
 [tool.setuptools]
-packages = ["gopxl_sdk", "gopxl"]
+packages = ["gopxl_sdk"]
 include-package-data = true
 
 [tool.setuptools.package-data]

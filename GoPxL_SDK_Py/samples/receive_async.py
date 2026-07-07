@@ -1,5 +1,8 @@
 """
-Receive stamp data asynchronously via GDP.
+Receive GDP data asynchronously (e.g. measurements).
+
+Does not modify sensor configuration — assumes Gocator Protocol and GDP outputs
+are already enabled in the active job. Connects, listens on a callback, and exits.
 
 GoPxL Python SDK sample - port of the C++ sample.
 Copyright (C) 2022-2026 by LMI Technologies Inc. Licensed under the MIT License.
@@ -8,6 +11,7 @@ Copyright (C) 2022-2026 by LMI Technologies Inc. Licensed under the MIT License.
 from __future__ import annotations
 
 import sys
+import threading
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -17,30 +21,33 @@ from common import sample_utils as su
 
 SYSTEM_IP = "192.168.1.10"
 CONTROL_PORT = 3600
-ENGINE_ID = "LMILaserLineProfiler"
-SCANNER_ID = "scanner-0"
-SENSOR_ID = "sensor-0"
-
-PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
-
-import threading
-import time
-
-
-def _on_data(dataset) -> None:
-    gh.print_dataset_messages(dataset)
 
 
 def _work(system) -> None:
-    gh.setup_live_or_replay(system)
-    gh.enable_gocator_protocol(system)
-    gh.add_gdp_output(system, su.stamp_source_id(ENGINE_ID))
+    if gh.is_replay_enabled(system):
+        print("\nUsing replay data")
+    else:
+        print("\nUsing live data")
+
+    print("\nConnecting to Gocator Protocol...")
     gdp = gh.connect_gdp(system)
-    gh.start_if_ready(system)
+
+    received = threading.Event()
+
+    def _on_data(dataset) -> None:
+        gh.print_dataset_messages(dataset)
+        received.set()
+
+    print("\nRunning callback to receive data asynchronously...")
     gdp.receive_data_async(_on_data)
-    time.sleep(su.ASYNC_CALLBACK_TIMEOUT_SEC)
+    if not received.wait(timeout=su.ASYNC_CALLBACK_TIMEOUT_SEC):
+        from gopxl_sdk.exceptions import GoChannelError
+
+        raise GoChannelError(
+            f"Timeout after {su.ASYNC_CALLBACK_TIMEOUT_SEC}s waiting for async GDP data. "
+            "Ensure GDP outputs are configured and the sensor is producing data."
+        )
     gdp.close()
-    system.stop()
 
 
 def _main(args):

@@ -25,7 +25,12 @@ PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 
 def _work(system) -> None:
     gh.setup_live_or_replay(system, su.SURFACE_MODE, PATHS.scanner_path)
-    gh.run_gdp_receive(system, su.surface_source_id(ENGINE_ID), "UniformSurface")
+    gh.run_gdp_receive(
+        system,
+        su.surface_source_id(ENGINE_ID),
+        su.surface_source_key(ENGINE_ID),
+        print_fn=gh.print_surface_messages,
+    )
 
 
 def _main(args):

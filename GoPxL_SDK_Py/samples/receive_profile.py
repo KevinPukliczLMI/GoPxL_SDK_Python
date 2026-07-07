@@ -31,7 +31,12 @@ def _work(system) -> None:
             PATHS.scanner_path,
             {"parameters": {"scanModeSettings": {"intensityEnabled": True}}},
         ).check_response(su.REST_COMMAND_TIMEOUT_MSEC)
-    gh.run_gdp_receive(system, su.profile_source_id(ENGINE_ID), "topUniformProfile")
+    gh.run_gdp_receive(
+        system,
+        su.profile_source_id(ENGINE_ID),
+        "topUniformProfile",
+        print_fn=gh.print_profile_messages,
+    )
 
 
 def _main(args):

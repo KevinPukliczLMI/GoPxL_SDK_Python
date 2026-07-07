@@ -1,247 +1,183 @@
 # GoPxL SDK (Python)
 
-Python SDK for **Gocator / GoPxL** sensors. It mirrors the official C++ GoPxL SDK (`GoSystem`, `GoRestClient`, `GoGdpClient`, discovery, GDP parsers, and the v1.5 `GoResource` API) so you can script sensor control without C++.
+Python SDK for Gocator / GoPxL sensors — REST control, GDP data streaming, discovery, and the GoResource API.
 
-It is not a full API clone — some C++ types and utilities are simplified or omitted (see [C++ SDK parity](#c-sdk-parity) below). For common tasks such as connecting, configuring sensors, receiving GDP data, and using the Resource API, it should be a practical alternative for Python workflows.
-
-## Install
+## 1. Install the SDK
 
 ```bash
 pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
 ```
 
-## Get samples
+Requires Python 3.9+. The `msgpack` dependency is installed automatically.
 
-### Clone from GitHub
+## 2. Copy the samples folder
 
-Shallow clone the default branch (no branch checkout needed):
-
-```bash
-git clone --depth 1 https://github.com/kevinpuklicz/GoPxL_SDK_Python.git
-```
-
-Copy samples into your project:
+From any project directory:
 
 ```bash
-# Linux / macOS
-cp -r GoPxL_SDK_Python/GoPxL_SDK_Py/samples ./samples
-
-# Windows (cmd)
-xcopy /E /I GoPxL_SDK_Python\GoPxL_SDK_Py\samples samples
+python -m gopxl_sdk
 ```
 
-Or let the SDK do the clone for you:
+This copies the full bundled `samples/` tree into `./samples` (including `common/` helpers).
+
+To use a different folder:
 
 ```bash
-python -m gopxl --from-github
+python -m gopxl_sdk ./my_samples
 ```
 
-### From pip install
-
-From your project folder (not inside the SDK source tree):
-
-```bash
-python -m gopxl
-```
-
-This copies bundled samples into `./samples`.
-
-Alternatives:
-
-```bash
-gopxl-copy-samples
-python -m gopxl_sdk --from-github
-python -m gopxl_sdk.copy_samples --from-github
-```
-
-Optional output path (positional, not `--destination`):
-
-```bash
-python -m gopxl ./my_samples
-python -m gopxl --from-github ./my_samples
-```
-
-## Run
+## 3. Run a sample
 
 ```bash
 cd samples
 python discover.py
-#or
-python receive_profile.py --ip 192.168.1.10 --port 3600
+python receive_profile.py
 ```
 
-Each sample defines `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top of the file. Override on the command line with `--ip` and `--port`.
+Each script has `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top. Override the IP on the command line:
+
+```bash
+python receive_profile.py --ip 192.168.1.30 --port 3600
+```
 
 ---
 
-## Requirements
+## Samples
 
-- Python 3.9+
-- [msgpack](https://pypi.org/project/msgpack/) (installed automatically)
+| File | What it does |
+|------|----------------|
+| `discover.py` | Find sensors on the network |
+| `align_sensor.py` | Run sensor alignment |
+| `configure_sensor.py` | Set triggers, exposure, and digital I/O |
+| `configure_tool.py` | Add and configure a measurement tool |
+| `backup_restore.py` | Backup or restore sensor configuration |
+| `save_job.py` | Save the active job to the sensor |
+| `acquire_2d_image.py` | Software-trigger and receive a 2D image (SmartCam) |
+| `receive_2d_image.py` | Receive a 2D image via GDP |
+| `receive_image.py` | Receive heightmap image data via GDP |
+| `receive_profile.py` | Receive uniform profile data via GDP |
+| `receive_surface.py` | Receive surface data via GDP |
+| `receive_measurement.py` | Receive tool measurement output via GDP |
+| `receive_string.py` | Receive string tool output via GDP |
+| `receive_async.py` | Receive GDP data on an async callback |
+| `receive_metrics.py` | Stream system/scanner/sensor metrics |
+| `replay_data.py` | Receive replayed profile data |
+| `multi_sensor_layout.py` | Build a multi-sensor layout |
+| `multilayer_outputs.py` | Confocal multilayer GDP outputs |
+| `system_upgrade.py` | Upload a firmware package |
+| `resource_api/resource_configure_sensor.py` | Configure a sensor via GoResource |
+| `resource_api/resource_configure_tool.py` | Configure a tool via GoResource |
+| `resource_api/resource_commands.py` | Run REST commands via GoResource |
+| `resource_api/resource_schema.py` | Read and validate resource schema |
+| `resource_api/resource_subscriptions.py` | Subscribe to resource updates |
 
-After install, import as `gopxl_sdk`:
+| Device | `ENGINE_ID` | Good starting samples |
+|--------|-------------|----------------------|
+| SmartCam / 2D (e.g. 1120-M) | `2dscanner` | `acquire_2d_image`, `receive_2d_image` |
+| Laser profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface` |
+| Snapshot (e.g. G3) | `LMIFringeSnapshot` | `receive_surface`, `receive_measurement` |
 
-```python
-import gopxl_sdk
-from gopxl_sdk import GoSystem, GoGdpClient, MessageType
-```
+---
 
-## Quick start
+## Example code
 
-Connect, start the device, and receive one GDP dataset:
+Connect, receive GDP measurements, and disconnect:
 
 ```python
 from gopxl_sdk import GoSystem, GoGdpClient, MessageType
 from gopxl_sdk.enums import GoSystemState
 
-ADDRESS = "192.168.1.10"
-CONTROL_PORT = 3600
-TIMEOUT_MS = 20000
-
-system = GoSystem(ADDRESS, CONTROL_PORT)
+system = GoSystem("192.168.1.30", 3600)
 system.connect()
 
-started = False
 if system.running_state() != GoSystemState.RUNNING:
     system.start()
-    started = True
 
 gdp = GoGdpClient()
 gdp.connect(system.address(), system.gdp_port())
-gdp.receive_data_sync(TIMEOUT_MS)
+gdp.receive_data_sync(20000)
 
 for msg in gdp.dataset():
     if msg.type() == MessageType.MEASUREMENT:
         print(msg.data_source_id(), msg.value)
 
 gdp.close()
-if started:
-    system.stop()
+system.stop()
 system.disconnect()
 ```
 
-Enable Gocator Protocol and add GDP outputs before receiving data (see `samples/receive_profile.py` or `samples/receive_2d_image.py`).
-
-## Discovery
-
-UDP discovery binds to port **3320** and broadcasts from each local interface (same model as the C++ SDK):
+Discover sensors on the network:
 
 ```python
-from gopxl_sdk import GoDiscoveryClient, GoSystem
+from gopxl_sdk import GoDiscoveryClient
 
 discovery = GoDiscoveryClient()
 discovery.blocking_discover(timeout_ms=3000, classic_discover=True)
 for inst in discovery.instance_list():
-    print(inst.ip_address, inst.app_name, inst.control_port)
-
-    system = GoSystem.from_instance(inst)
-    system.connect()
-    # ...
-    system.disconnect()
+    print(inst.ip_address, inst.app_name)
 ```
 
-The PC and sensor must share a subnet (broadcast does not cross routers).
+---
 
-## GoResource API (v1.5)
+## SDK files
 
-Typed, cached access to REST resources with schema validation and subscriptions:
+After `pip install`, these are the main `gopxl_sdk` Python modules:
+
+| File | What it does |
+|------|----------------|
+| `__init__.py` | Public package exports (`GoSystem`, `GoGdpClient`, etc.) |
+| `system.py` | `GoSystem` — connect, start/stop, GDP port, resource access |
+| `rest_client.py` | `GoRestClient` — REST read/write, commands, sub/unsub, streams |
+| `request.py` | `GoRequest` — builds REST requests sent to the sensor |
+| `response.py` | `GoResponse`, `GoRequestResponse`, `GoNotificationResponse`, `GoStreamResponse` |
+| `transaction.py` | `GoTransaction` — async request/response pairing with timeouts |
+| `gdp_client.py` | `GoGdpClient` — GDP TCP connection, sync and async receive |
+| `gdp_msg.py` | GDP message types — profile, surface, image, measurement, stamp, etc. |
+| `dataset.py` | `GoDataSet` — collection of messages from one GDP frame |
+| `kserializer.py` | Low-level GDP packet read/write (MessagePack over TCP) |
+| `discovery.py` | `GoDiscoveryClient` — find GoPxL and Gocator sensors on the network |
+| `classic_discovery.py` | Legacy UDP discovery used by older Gocator sensors |
+| `instance.py` | `GoInstance` — one discovered sensor (IP, port, model, serial) |
+| `resource.py` | `GoResource` — cached REST resource with get/set/update |
+| `resource_manager.py` | `GoResourceManager` — creates and tracks `GoResource` objects |
+| `schema_validator.py` | Validates resource updates against sensor JSON schema |
+| `json_pointer.py` | JSON pointer helpers used by the resource API |
+| `enums.py` | `GoStatus`, `GoSystemState`, `MessageType`, `GoRequestMethod`, etc. |
+| `exceptions.py` | `GoRequestError`, `GoChannelError`, `GoResourceError`, etc. |
+| `def_.py` | Default ports and shared constants |
+| `copy_samples.py` | Copies bundled `samples/` to a local folder |
+| `__main__.py` | Entry point for `python -m gopxl_sdk` |
+
+**Main classes you import:**
 
 ```python
-from gopxl_sdk import GoSystem
-
-system = GoSystem("192.168.1.10", 3600)
-system.connect()
-
-sensor = system.resource(
-    "/scan/engines/2dscanner/scanners/scanner-0/sensors/sensor-0"
+from gopxl_sdk import (
+    GoSystem,           # system.py
+    GoRestClient,       # rest_client.py
+    GoGdpClient,        # gdp_client.py
+    GoDiscoveryClient,  # discovery.py
+    GoResource,         # resource.py
+    GoDataSet,          # dataset.py
+    MessageType,        # enums.py
 )
-sensor.cache()
-
-with sensor.scoped_update():
-    sensor.set_string("displayName", "My Sensor")
-    sensor.set_int("/parameters/exposureSettings/singleExposure", 1200)
-
-print(sensor.get_string("displayName"))
-system.disconnect()
 ```
 
-On other device types, swap the engine id in the path:
-
-| Device | Sensor path |
-|--------|-------------|
-| Laser line profiler (e.g. 2530) | `/scan/engines/LMILaserLineProfiler/scanners/scanner-0/sensors/sensor-0` |
-| Gocator Snapshot (e.g. G3) | `/scan/engines/LMIFringeSnapshot/scanners/scanner-0/sensors/sensor-0` |
-
-See `samples/resource_api/` for subscriptions, schema, and commands.
-
-## Samples
-
-Each sample defines `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top of the file. Set `ENGINE_ID` to match your device (`2dscanner` for 1120-M, `LMILaserLineProfiler` for 2530, `LMIFringeSnapshot` for G3 snapshot). Override IP/port on the command line with `--ip` and `--port`.
-
-```bash
-cd samples
-python discover.py
-python receive_profile.py --ip 192.168.1.10 --port 3600
+```
+gopxl_sdk/
+  system.py              GoSystem
+  rest_client.py         REST client
+  gdp_client.py          GDP client
+  gdp_msg.py             GDP parsers
+  dataset.py             GDP datasets
+  discovery.py           Network discovery
+  resource.py            GoResource API
+  resource_manager.py    Resource cache/manager
+  enums.py               Status codes and message types
+  exceptions.py          SDK errors
+  samples/               Bundled sample scripts
 ```
 
-**Device types**
-
-| Device | Engine id | Typical samples |
-|--------|-----------|-----------------|
-| SmartCam / 2D camera (e.g. 1120-M) | `2dscanner` | `receive_2d_image`, `acquire_2d_image` |
-| Laser line profiler (e.g. 2530) | `LMILaserLineProfiler` | `receive_profile`, `receive_surface`, `receive_measurement` |
-| Gocator Snapshot (e.g. G3) | `LMIFringeSnapshot` | `receive_surface`, `receive_measurement` |
-
-`receive_image.py` and `receive_metrics.py` auto-detect the live engine when possible.
-
-## API overview
-
-| Component | Description |
-|-----------|-------------|
-| `GoSystem` | Connect, start/stop, GDP port, sensor paths, resource manager |
-| `GoRestClient` | REST CRUD, commands, sub/unsub, streams, notification listeners |
-| `GoGdpClient` | GDP TCP streaming (sync and async with receive queue + callback thread) |
-| `GoDataSet` / GDP messages | Profile, surface, image, stamp, measurement, mesh, spots, rendering, features, signal/null/health |
-| `GoDiscoveryClient` | GoPxL UDP discovery (port 3320) and classic Gocator discovery (port 3220) |
-| `GoResource` / `GoResourceManager` | Cached resources, schema validation, subscriptions, HAL children, deferred updates |
-| `GoSchemaValidator` | Client-side JSON Schema validation |
-| Exceptions | `GoRequestError`, `GoChannelError`, `GoResourceError`, `GoResourceValidationError` |
-
-## Project layout
-
-```
-GoPxL_SDK_Py/
-  __init__.py          # package entry (import as gopxl_sdk)
-  system.py            # GoSystem
-  rest_client.py       # GoRestClient
-  gdp_client.py        # GoGdpClient
-  gdp_msg.py           # GDP message parsers
-  resource.py          # GoResource
-  resource_manager.py  # GoResourceManager
-  discovery.py         # GoDiscoveryClient
-  pyproject.toml       # pip package metadata (name: gopxl-sdk)
-  samples/             # sample applications
-```
-
-## C++ SDK parity
-
-This SDK covers the main control-plane workflows: REST, discovery, GDP receive (profiles, surfaces, images, measurements), async GDP with a receive/queue/callback thread model, and the GoResource API.
-
-GDP common-header transform (3×4 `f32`) and bounding box (6×`f32`) are parsed for wire alignment. Public `GoGdpTransform` / `GoGdpBoundingBox` types and `GoJson` / `GoUri` wrappers are not exposed; Python uses `dict` and `json_pointer` helpers instead.
-
-## Pin a release
-
-```bash
-pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git@v0.3.0
-```
-
-## For SDK developers
-
-From a local copy of `GoPxL_SDK_Py/`:
-
-```bash
-pip install -e .
-```
+---
 
 ## License
 

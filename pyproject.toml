@@ -24,11 +24,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Recognition",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-]
-
 [project.scripts]
 gopxl-copy-samples = "gopxl_sdk.copy_samples:main"
 
@@ -36,11 +31,8 @@ gopxl-copy-samples = "gopxl_sdk.copy_samples:main"
 gopxl_sdk = "."
 
 [tool.setuptools]
-packages = ["gopxl_sdk", "gopxl"]
+packages = ["gopxl_sdk"]
 include-package-data = true
 
 [tool.setuptools.package-data]
 gopxl_sdk = ["samples/**/*.py"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

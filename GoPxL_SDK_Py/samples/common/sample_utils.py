@@ -373,10 +373,13 @@ def profile_source_id(engine_id: str = ENGINE_ID) -> str:
 
 
 def surface_source_id(engine_id: str = ENGINE_ID, scanner_id: str = SCANNER_ID) -> str:
+    return f"scan:{engine_id}:{scanner_id}:{surface_source_key(engine_id, scanner_id)}"
+
+
+def surface_source_key(engine_id: str = ENGINE_ID, scanner_id: str = SCANNER_ID) -> str:
     component = SENSOR_ID if engine_id == "LMIFringeSnapshot" else "top"
     layer = "Layer0" if engine_id == "LMIConfocalLineProfiler" else ""
-    key = f"{component}UniformSurface{layer}"
-    return f"scan:{engine_id}:{scanner_id}:{key}"
+    return f"{component}UniformSurface{layer}"
 
 
 def stamp_source_id(engine_id: str = ENGINE_ID) -> str:

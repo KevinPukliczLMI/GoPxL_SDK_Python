@@ -1,5 +1,7 @@
 """Enumerations mirroring the C++ SDK."""
 
+from __future__ import annotations
+
 from enum import IntEnum
 
 
@@ -14,8 +16,32 @@ class GoStatus(IntEnum):
     ERROR_INCOMPLETE = -992
     ERROR_STREAM = -991
     ERROR_CLOSED = -990
+    ERROR_VERSION = -989
+    ERROR_ABORT = -988
+    ERROR_ALREADY_EXISTS = -987
+    ERROR_NETWORK = -986
+    ERROR_HEAP = -985
+    ERROR_FORMAT = -984
+    ERROR_READ_ONLY = -983
+    ERROR_WRITE_ONLY = -982
+    ERROR_BUSY = -981
+    ERROR_CONFLICT = -980
+    ERROR_OS = -979
+    ERROR_DEVICE = -978
+    ERROR_FULL = -977
+    ERROR_IN_PROGRESS = -976
+    ERROR_OVERHEAT = -975
     ERROR = 0
     OK = 1
+
+    @classmethod
+    def _missing_(cls, value: object) -> GoStatus:
+        if isinstance(value, int):
+            pseudo = int.__new__(cls, value)
+            pseudo._name_ = f"UNKNOWN_{value}"
+            pseudo._value_ = value
+            return pseudo
+        return super()._missing_(value)
 
 
 class GoRequestMethod(IntEnum):
