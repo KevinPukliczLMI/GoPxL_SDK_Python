@@ -189,6 +189,34 @@ def print_surface_messages(dataset) -> None:
         )
 
 
+def print_measurement_messages(dataset) -> None:
+    """Print measurement/null messages with GDP and data-source IDs (matches C++ ReceiveMeasurement)."""
+    from gopxl_sdk.gdp_msg import GoGdpMeasurement, GoGdpNull
+
+    print(f"\nTotal number of messages: {dataset.count()}")
+    for index, msg in enumerate(dataset):
+        print("\n" + "-" * 64)
+        print(f"GDP Output Source {index + 1}")
+        if isinstance(msg, GoGdpMeasurement):
+            print("Message type: Measurement")
+            print(f"GDP ID: {msg.gdp_id}")
+            print(f"Data source ID: {msg.data_source_id()}")
+            if msg.arrayed_count == 0:
+                print("Not arrayed")
+            else:
+                print("Arrayed")
+                print(f"\tCount: {msg.arrayed_count}")
+                print(f"\tIndex: {msg.arrayed_index}")
+            print(f"\tValue: {msg.value}")
+            print(f"\tDecision: {msg.decision}")
+        elif isinstance(msg, GoGdpNull):
+            print("Message type: Null")
+            print(f"GDP ID: {msg.gdp_id}")
+            print(f"Data source ID: {msg.data_source_id()}")
+        else:
+            print("No measurement found in the message.")
+
+
 def print_dataset_messages(dataset) -> None:
     from gopxl_sdk.gdp_msg import (
         GoGdpImage,
@@ -260,6 +288,24 @@ def print_dataset_messages(dataset) -> None:
             print(f"Error status: {msg.error_status}")
         else:
             print(f"Message type: {mtype}")
+
+
+def run_gdp_receive_configured(
+    system,
+    timeout_ms: int | None = None,
+    *,
+    print_fn=print_dataset_messages,
+) -> None:
+    """Enable GDP, connect, start, and receive one dataset without changing outputs."""
+    timeout = timeout_ms or su.RECEIVE_DATA_TIMEOUT_MSEC
+    enable_gocator_protocol(system)
+    print("\nConnecting to Gocator Protocol...")
+    gdp = connect_gdp(system)
+    start_if_ready(system)
+    gdp.receive_data_sync(timeout)
+    print_fn(gdp.dataset())
+    gdp.close()
+    system.stop()
 
 
 def run_gdp_receive(
