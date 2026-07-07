@@ -29,7 +29,7 @@ python receive_profile.py
 Each script has `SYSTEM_IP`, `CONTROL_PORT`, and `ENGINE_ID` at the top. Override the IP on the command line:
 
 ```bash
-python receive_profile.py --ip 192.168.1.30 --port 3600
+python receive_profile.py --ip 192.168.1.10 --port 3600
 ```
 
 ---
