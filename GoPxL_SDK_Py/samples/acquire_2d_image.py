@@ -30,7 +30,7 @@ TRIGGER_ACTION = f"{PATHS.scanner_path}/actions/trigger"
 
 
 def _work(system) -> None:
-    from gopxl_sdk.enums import GoSystemState, MessageType
+    from GoPxL_SDK_Py.enums import GoSystemState, MessageType
 
     client = system.client()
     if system.running_state() == GoSystemState.RUNNING:
@@ -63,7 +63,7 @@ def _work(system) -> None:
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
 
     system = GoSystem()
     if su.connect_system(system, args.ip, args.port):

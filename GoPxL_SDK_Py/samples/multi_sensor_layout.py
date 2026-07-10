@@ -44,8 +44,8 @@ LAYOUT_PATH = f"{PATHS.scanner_path}/layout"
 
 def _read_profiler_serial(ip: str, port: int) -> str:
     """Connect to a profiler and return sensor-0 serial number."""
-    from gopxl_sdk import GoSystem
-    from gopxl_sdk.exceptions import GoRequestError
+    from GoPxL_SDK_Py import GoSystem
+    from GoPxL_SDK_Py.exceptions import GoRequestError
 
     system = GoSystem()
     system.set_address(ip)
@@ -87,7 +87,7 @@ def _resolve_additional_serials(add_ips: list[str], port: int) -> list[str]:
 
 
 def _main(args: argparse.Namespace) -> int:
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
 
     add_ips = args.add_ip if args.add_ip else list(ADDITIONAL_PROFILER_IPS)
     serials = _resolve_additional_serials(add_ips, args.port)
@@ -146,7 +146,7 @@ def _main(args: argparse.Namespace) -> int:
 
 def main() -> int:
     su.bootstrap_sdk()
-    from gopxl_sdk.exceptions import GoChannelError, GoRequestError
+    from GoPxL_SDK_Py.exceptions import GoChannelError, GoRequestError
 
     parser = argparse.ArgumentParser(
         description="Configure multi-sensor layout across laser line profilers.",

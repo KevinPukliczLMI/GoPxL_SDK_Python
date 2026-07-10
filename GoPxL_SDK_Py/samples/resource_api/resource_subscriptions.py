@@ -30,8 +30,8 @@ import time
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
-    from gopxl_sdk.resource import GoRelationType
+    from GoPxL_SDK_Py import GoSystem
+    from GoPxL_SDK_Py.resource import GoRelationType
 
     system = GoSystem()
     if su.connect_system(system, args.ip, args.port):

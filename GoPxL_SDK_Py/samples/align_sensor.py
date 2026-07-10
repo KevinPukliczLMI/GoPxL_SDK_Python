@@ -31,7 +31,7 @@ ALIGNING_STATUS = 2
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
     import time
 
     system = GoSystem()

@@ -34,8 +34,8 @@ def _print_schema(label: str, schema: dict) -> None:
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
-    from gopxl_sdk.exceptions import GoResourceValidationError
+    from GoPxL_SDK_Py import GoSystem
+    from GoPxL_SDK_Py.exceptions import GoResourceValidationError
 
     system = GoSystem()
     if su.connect_system(system, args.ip, args.port):

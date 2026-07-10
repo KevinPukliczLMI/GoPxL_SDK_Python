@@ -19,9 +19,9 @@ DISCOVER_TIMEOUT_MSEC = 5000
 
 def main() -> int:
     su.bootstrap_sdk()
-    from gopxl_sdk import GoDiscoveryClient, GoSystem
-    from gopxl_sdk.discovery import ipv4_interface_addresses
-    from gopxl_sdk.exceptions import GoRequestError
+    from GoPxL_SDK_Py import GoDiscoveryClient, GoSystem
+    from GoPxL_SDK_Py.discovery import ipv4_interface_addresses
+    from GoPxL_SDK_Py.exceptions import GoRequestError
 
     ifaces = ipv4_interface_addresses()
     print(f"Discovering on local interfaces: {', '.join(ifaces) if ifaces else '(none found)'}")

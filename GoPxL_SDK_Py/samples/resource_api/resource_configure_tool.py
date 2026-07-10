@@ -27,7 +27,7 @@ SENSOR_ID = "sensor-0"
 
 PATHS = su.device_paths(ENGINE_ID, SCANNER_ID, SENSOR_ID)
 def _main(args):
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
     import time
 
     system = GoSystem()

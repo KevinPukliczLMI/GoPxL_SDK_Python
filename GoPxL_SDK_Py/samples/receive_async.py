@@ -41,7 +41,7 @@ def _work(system) -> None:
     print("\nRunning callback to receive data asynchronously...")
     gdp.receive_data_async(_on_data)
     if not received.wait(timeout=su.ASYNC_CALLBACK_TIMEOUT_SEC):
-        from gopxl_sdk.exceptions import GoChannelError
+        from GoPxL_SDK_Py.exceptions import GoChannelError
 
         raise GoChannelError(
             f"Timeout after {su.ASYNC_CALLBACK_TIMEOUT_SEC}s waiting for async GDP data. "
@@ -51,7 +51,7 @@ def _work(system) -> None:
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
 
     system = GoSystem()
     if su.connect_system(system, args.ip, args.port):

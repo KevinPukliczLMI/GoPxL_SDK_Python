@@ -34,7 +34,7 @@ def _work(system) -> None:
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
 
     system = GoSystem()
     if su.connect_system(system, args.ip, args.port):

@@ -69,7 +69,7 @@ def _restore(system, backup_file: Path) -> None:
 
 
 def _main(args: argparse.Namespace) -> int:
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
 
     system = GoSystem()
     if su.connect_system(system, args.ip, args.port):
@@ -89,7 +89,7 @@ def _main(args: argparse.Namespace) -> int:
 
 def main() -> int:
     su.bootstrap_sdk()
-    from gopxl_sdk.exceptions import GoChannelError, GoRequestError
+    from GoPxL_SDK_Py.exceptions import GoChannelError, GoRequestError
 
     parser = argparse.ArgumentParser(description="Backup or restore sensor configuration.")
     parser.add_argument("--ip", default=SYSTEM_IP, help="Sensor IP address")

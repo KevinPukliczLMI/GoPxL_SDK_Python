@@ -23,7 +23,7 @@ UPGRADE_ARCHIVE_PATH = Path("./upgrade_archive.dat")
 
 
 def _main(args):
-    from gopxl_sdk import GoSystem
+    from GoPxL_SDK_Py import GoSystem
     import time
 
     system = GoSystem()

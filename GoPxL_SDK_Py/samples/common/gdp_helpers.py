@@ -94,7 +94,7 @@ def ensure_scan_mode(system, mode: int, scanner_path: str | None = None) -> None
 
 
 def connect_gdp(system):
-    from gopxl_sdk import GoGdpClient
+    from GoPxL_SDK_Py import GoGdpClient
 
     client = GoGdpClient()
     client.connect(system.address(), system.gdp_port())
@@ -102,7 +102,7 @@ def connect_gdp(system):
 
 
 def start_if_ready(system) -> None:
-    from gopxl_sdk.enums import GoSystemState
+    from GoPxL_SDK_Py.enums import GoSystemState
 
     if system.running_state() == GoSystemState.READY:
         print("\nStarting system...")
@@ -123,7 +123,7 @@ def setup_live_or_replay(system, scan_mode: int | None = None, scanner_path: str
 
 def print_profile_messages(dataset) -> None:
     """Print only uniform/point-cloud profile messages (matches C++ ReceiveProfile)."""
-    from gopxl_sdk.gdp_msg import GoGdpProfilePointCloud, GoGdpProfileUniform
+    from GoPxL_SDK_Py.gdp_msg import GoGdpProfilePointCloud, GoGdpProfileUniform
 
     print(f"\nTotal number of messages: {dataset.count()}")
     profile_count = 0
@@ -157,7 +157,7 @@ def print_profile_messages(dataset) -> None:
 
 def print_surface_messages(dataset) -> None:
     """Print only uniform/point-cloud surface messages (matches C++ ReceiveSurface)."""
-    from gopxl_sdk.gdp_msg import GoGdpSurfacePointCloud, GoGdpSurfaceUniform
+    from GoPxL_SDK_Py.gdp_msg import GoGdpSurfacePointCloud, GoGdpSurfaceUniform
 
     print(f"\nTotal number of messages: {dataset.count()}")
     surface_count = 0
@@ -191,7 +191,7 @@ def print_surface_messages(dataset) -> None:
 
 def print_measurement_messages(dataset) -> None:
     """Print measurement/null messages with GDP and data-source IDs (matches C++ ReceiveMeasurement)."""
-    from gopxl_sdk.gdp_msg import GoGdpMeasurement, GoGdpNull
+    from GoPxL_SDK_Py.gdp_msg import GoGdpMeasurement, GoGdpNull
 
     print(f"\nTotal number of messages: {dataset.count()}")
     for index, msg in enumerate(dataset):
@@ -218,7 +218,7 @@ def print_measurement_messages(dataset) -> None:
 
 
 def print_dataset_messages(dataset) -> None:
-    from gopxl_sdk.gdp_msg import (
+    from GoPxL_SDK_Py.gdp_msg import (
         GoGdpImage,
         GoGdpMeasurement,
         GoGdpNull,

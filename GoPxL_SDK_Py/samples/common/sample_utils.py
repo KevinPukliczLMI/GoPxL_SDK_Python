@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -126,34 +125,33 @@ def device_paths(
 
 
 def bootstrap_sdk() -> None:
-    """Load gopxl_sdk from pip install, or from the parent repo when developing locally."""
-    if "gopxl_sdk" in sys.modules:
+    """Load GoPxL_SDK_Py from pip install, or from this repo checkout."""
+    if "GoPxL_SDK_Py" in sys.modules:
         return
     try:
-        import gopxl_sdk  # noqa: F401
+        import GoPxL_SDK_Py  # noqa: F401
         return
     except ImportError:
         pass
+
+    # samples/common -> GoPxL_SDK_Py; put the parent of that folder on sys.path
+    # so `import GoPxL_SDK_Py` matches the folder name (and Pylance).
     sdk_root = Path(__file__).resolve().parents[2]
-    init_py = sdk_root / "__init__.py"
-    if not init_py.is_file():
+    if not (sdk_root / "__init__.py").is_file():
         raise ImportError(
-            "gopxl_sdk is not installed. Run:\n"
+            "GoPxL_SDK_Py is not installed. Run:\n"
             "  pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git"
         )
-    spec = importlib.util.spec_from_file_location(
-        "gopxl_sdk",
-        init_py,
-        submodule_search_locations=[str(sdk_root)],
-    )
-    if spec is None or spec.loader is None:
+    repo_root = str(sdk_root.parent)
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    try:
+        import GoPxL_SDK_Py  # noqa: F401
+    except ImportError as exc:
         raise ImportError(
-            "gopxl_sdk is not installed. Run: "
+            "GoPxL_SDK_Py is not installed. Run: "
             "pip install git+https://github.com/kevinpuklicz/GoPxL_SDK_Python.git"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["gopxl_sdk"] = module
-    spec.loader.exec_module(module)
+        ) from exc
 
 
 def parse_args(
@@ -190,7 +188,7 @@ def format_request_error(exc: Exception) -> str:
 
 
 def verify_connection(system) -> int:
-    from gopxl_sdk.exceptions import GoRequestError
+    from GoPxL_SDK_Py.exceptions import GoRequestError
 
     client = system.client()
     try:
@@ -241,7 +239,7 @@ def verify_connection(system) -> int:
 
 
 def connect_system(system, ip: str, port: int) -> int:
-    from gopxl_sdk.exceptions import GoChannelError, GoRequestError
+    from GoPxL_SDK_Py.exceptions import GoChannelError, GoRequestError
 
     system.set_address(ip)
     system.set_control_port(port)
@@ -294,7 +292,7 @@ def _engine_ids_from_payload(payload: dict) -> list[str]:
 
 def _engine_is_live(system, engine_id: str) -> bool:
     """True if the engine's default scanner path exists on the device."""
-    from gopxl_sdk.exceptions import GoRequestError
+    from GoPxL_SDK_Py.exceptions import GoRequestError
 
     try:
         system.client().read(scanner_path_for(engine_id)).get_response(REST_COMMAND_TIMEOUT_MSEC)
@@ -394,7 +392,7 @@ def run_main(
     default_port: int = DEFAULT_CONTROL_PORT,
 ) -> int:
     bootstrap_sdk()
-    from gopxl_sdk.exceptions import GoChannelError, GoRequestError
+    from GoPxL_SDK_Py.exceptions import GoChannelError, GoRequestError
 
     args = parse_args(description, default_ip=default_ip, default_port=default_port)
     try:
