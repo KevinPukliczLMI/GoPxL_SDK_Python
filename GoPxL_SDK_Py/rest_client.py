@@ -10,7 +10,7 @@ from typing import Callable
 
 import msgpack
 
-from .def_ import MSGPACK_MESSAGE_TYPE
+from .def_ import MSGPACK_MESSAGE_TYPE, configure_tcp_socket
 from .enums import GoRequestMethod
 from .exceptions import GoChannelError
 from .request import GoRequest
@@ -104,6 +104,7 @@ class GoRestClient:
         except OSError as exc:
             sock.close()
             raise GoChannelError(f"Failed to connect to {address}:{port}: {exc}") from exc
+        configure_tcp_socket(sock)
         sock.settimeout(0.5)
         self._sock = sock
         self.address = address
@@ -251,15 +252,19 @@ class GoRestClient:
         tx = GoTransaction(request)
         body = msgpack.packb(request.to_msgpack_body(), use_bin_type=True)
         frame = _frame_request(body)
+        sock = self._sock
+        if sock is None:
+            raise GoChannelError("Not connected")
+        # Queue + send must be atomic: concurrent REST threads otherwise interleave
+        # frames on the single control socket and the sensor drops the session.
         with self._lock:
             self._queue.append(tx)
-        try:
-            self._sock.sendall(frame)
-        except OSError as exc:
-            with self._lock:
+            try:
+                sock.sendall(frame)
+            except OSError as exc:
                 if self._queue and self._queue[-1] is tx:
                     self._queue.pop()
-            raise GoChannelError(f"Send failed: {exc}") from exc
+                raise GoChannelError(f"Send failed: {exc}") from exc
 
         if method in (GoRequestMethod.UPDATE, GoRequestMethod.CREATE, GoRequestMethod.DELETE, GoRequestMethod.CALL):
             if self._non_idempotent_request_handler:
@@ -314,10 +319,22 @@ class GoRestClient:
                 pass
         self._on_disconnect()
 
+    def _fail_pending(self, error: Exception) -> None:
+        with self._lock:
+            pending = list(self._queue)
+            self._queue.clear()
+        for tx in pending:
+            try:
+                tx._on_error(error)  # noqa: SLF001
+            except Exception:
+                pass
+
     def _on_disconnect(self) -> None:
         if self._disconnect_fired:
             return
         self._disconnect_fired = True
+        self._running = False
+        self._fail_pending(GoChannelError("Disconnected"))
         self.clear_all_listeners()
         if self._disconnect_handler:
             try:

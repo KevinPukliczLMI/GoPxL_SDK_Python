@@ -7,7 +7,7 @@ import socket
 import threading
 from typing import Callable
 
-from .def_ import DEFAULT_GDP_SERVER_PORT
+from .def_ import DEFAULT_GDP_SERVER_PORT, configure_tcp_socket
 from .dataset import GoDataSet
 from .exceptions import GoChannelError
 from .gdp_msg import GoGdpMsg, parse_gdp_message
@@ -29,6 +29,10 @@ class GoGdpClient:
         self._dataset = GoDataSet()
         self._ip_address: str = ""
         self._port: int = 0
+        self._disconnect_handler: Callable[[], None] | None = None
+
+    def set_disconnect_handler(self, handler: Callable[[], None] | None) -> None:
+        self._disconnect_handler = handler
 
     def connect(self, ip_address: str, port: int = DEFAULT_GDP_SERVER_PORT, timeout: float = 5.0) -> None:
         if self._connected:
@@ -40,6 +44,7 @@ class GoGdpClient:
         except OSError as exc:
             sock.close()
             raise GoChannelError(f"Failed to connect GDP to {ip_address}:{port}: {exc}") from exc
+        configure_tcp_socket(sock)
         sock.settimeout(1.0)
         self._sock = sock
         self._connected = True
@@ -47,6 +52,7 @@ class GoGdpClient:
         self._port = port
 
     def close(self) -> None:
+        self._disconnect_handler = None
         self._async = False
         self._connected = False
         if self._sock:
@@ -159,10 +165,10 @@ class GoGdpClient:
                 except socket.timeout:
                     continue
                 except EOFError:
-                    self._connected = False
+                    self._fire_disconnect()
                     break
                 except OSError:
-                    self._connected = False
+                    self._fire_disconnect()
                     break
         finally:
             if self._data_queue is not None:
@@ -170,6 +176,18 @@ class GoGdpClient:
                     self._data_queue.put(_QUEUE_STOP)
                 except Exception:
                     pass
+
+    def _fire_disconnect(self) -> None:
+        already = not self._connected
+        self._connected = False
+        if already:
+            return
+        handler = self._disconnect_handler
+        if handler is not None:
+            try:
+                handler()
+            except Exception:
+                pass
 
     def _data_loop(self) -> None:
         """Dequeue datasets and invoke the user callback."""
